@@ -8,13 +8,17 @@
 > else, write real content (no `[bracket]` placeholders survive into the output), build
 > the files, verify them, and report what you built.
 >
-> This works whether the project folder is empty (greenfield) or already has code
-> (retrofit) — Step 1 covers both.
+> This works whether the project folder is empty (greenfield), already has code but no
+> `.claude/` harness (Step 1's retrofit case), or already has a mature harness of its own
+> (Step 0's gap-fill case).
 
 ---
 
 ## Do this, in order
 
+0. **Check whether a harness already exists** — Step 0. If it does, this becomes a
+   gap-fill retrofit, not a fresh bootstrap; the rest of this list still applies, just
+   scoped to what's actually missing.
 1. **Profile the project** from the description (and the repo, if one exists) — Step 1.
 2. **Write a lean, project-specific `CLAUDE.md`** into the project root — Step 2 gives you
    the section-by-section spec; every section is *derived*, not templated.
@@ -30,6 +34,42 @@
 Don't ask the user to approve each step — do the work, then summarize what you built and
 why. Only stop to ask when Step 1 hits a genuine fork (see "When to ask" below); everything
 else, make the best call and note the assumption in the output CLAUDE.md's Gotchas.
+
+---
+
+## Step 0 — Check whether a harness already exists
+
+Before profiling anything, check whether `.claude/` already exists **with real content** —
+not just an empty scaffold. A `CLAUDE.md` with actual project-specific detail, populated
+`agents/`/`skills/` directories, or `agent-memory/` with real history all mean this isn't
+a fresh bootstrap — it's a retrofit onto an *already-harnessed* project. That's a
+materially different situation from Step 1's "existing conventions" row, which is about
+matching code style in a project that has no `.claude/` opinions yet.
+
+If a mature harness already exists: **stop and ask** how to proceed — this is a second,
+equally valid trigger for "When to ask" alongside genuine language ambiguity. Frame it as
+a real choice:
+
+- **Fill only the gaps** (the common, safest choice) — diff what `HARNESS_REFERENCE.md`
+  Part 1 would generate against what's actually there, and build only what's structurally
+  missing (no `hooks/` directory at all, inline one-liner hooks instead of real files, no
+  `/verify`, no session-start memory injection). Never regenerate `CLAUDE.md` from scratch
+  or duplicate an agent/skill that already covers a trait-table row — the existing,
+  tailored version is worth more than a generic replacement.
+- **Full regenerate** — rare, and destructive to real prior work. Only do this on an
+  explicit confirmation that the user wants the existing harness replaced, not merely
+  refreshed.
+- **Abort** — if the existing harness is clearly intentional and complete, say so plainly
+  instead of finding busywork to justify running anyway.
+
+Two things worth doing opportunistically in gap-fill mode: an existing `settings.json`
+full of inline one-liner hooks (`"command": "node -e \"...\""`) is worth extracting into
+real files even beyond the structural gap — a one-liner is unreadable and untestable, and
+a latent bug hiding in one won't surface until it's something `HARNESS_REFERENCE.md` §1.8
+can actually pipe a payload through. And if the user asked to *review* a diff before it's
+final, that implies holding off on the commit-on-a-branch step until they've actually
+confirmed — don't commit something they haven't seen yet just because "commit the result"
+is the normal default for a fresh bootstrap.
 
 ---
 
@@ -49,11 +89,13 @@ You need to determine, before writing anything:
 | **Deploy target, if any** | Named platform (Vercel, Fly, a Docker registry, an app store, PyPI, crates.io...) or "not yet" — don't invent one. |
 | **Existing conventions** | If retrofitting a real repo: read 3-5 existing files to match naming, test framework, and lint config already in use rather than imposing a different one. While you're in there, check for **declared-but-unused** signals too — a dependency in the manifest that's never imported, a config file (`.eslintrc`, etc.) with no script wired to run it — these are exactly the "looks done but isn't" gaps worth a line in the output CLAUDE.md's Gotchas. |
 
-**When to ask:** only if the *language/runtime* is genuinely undecidable — the description
-names no stack, no repo exists to infer from, and the project type has no single dominant
-default (e.g. "a tool that syncs my notes" could be a CLI in almost anything). Ask one
-question, offer the 2-3 most likely options. For everything else — test framework choice,
-folder layout, which linter — pick the ecosystem-conventional default and move on.
+**When to ask:** two triggers, both narrow on purpose. (1) The *language/runtime* is
+genuinely undecidable — the description names no stack, no repo exists to infer from, and
+the project type has no single dominant default (e.g. "a tool that syncs my notes" could
+be a CLI in almost anything). (2) Step 0 found an existing mature harness — see there for
+how to frame that question. Either way, ask one question, offer the most likely options.
+For everything else — test framework choice, folder layout, which linter — pick the
+ecosystem-conventional default and move on.
 
 ---
 

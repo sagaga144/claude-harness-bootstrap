@@ -206,6 +206,16 @@ The skeleton every project needs (adapt hook commands/agents to your stack):
 
 Pipe a sample JSON payload into each hook script directly (`echo '{"tool_input":{...}}' | node .claude/hooks/x.cjs`) and confirm the exit code matches intent (`0` = allow, `2` = block). Validate `settings.json` parses. Then dry-run `/verify` and one orchestrator end-to-end. Commit on a branch; never push from inside the build-out.
 
+**Watch for a self-tripping test when verifying a push/secret-guard hook specifically.**
+If that hook is already wired into `settings.json` and you test it by running
+`echo '{"tool_input":{"command":"git push ..."}}' | node .claude/hooks/guard-bash-push.cjs`
+as a raw Bash tool call, the *outer* Bash command's own text contains the literal trigger
+phrase — so the live `PreToolUse: Bash` hook can fire on your test invocation itself,
+before the inner simulated call ever runs. Use a file-based fixture and redirect it in
+(`node .claude/hooks/guard-bash-push.cjs < fixture.json`) so the trigger phrase lives only
+inside the piped file content, never in the Bash command text the live hook actually
+scans.
+
 ### 1.9 Release / deploy health check
 
 Only build this if Step 1's "Deploy target, if any" wasn't "not yet." "Shipping" means one
