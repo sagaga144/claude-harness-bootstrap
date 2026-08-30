@@ -47,7 +47,7 @@ You need to determine, before writing anything:
 | **Multi-language / i18n?** | Only if the description says so or a repo already has translation files. |
 | **Is it a published package/library?** | Public API surface, semver, consumers you can't see → different discipline than an app (see Code Style / Testing below). |
 | **Deploy target, if any** | Named platform (Vercel, Fly, a Docker registry, an app store, PyPI, crates.io...) or "not yet" — don't invent one. |
-| **Existing conventions** | If retrofitting a real repo: read 3-5 existing files to match naming, test framework, and lint config already in use rather than imposing a different one. |
+| **Existing conventions** | If retrofitting a real repo: read 3-5 existing files to match naming, test framework, and lint config already in use rather than imposing a different one. While you're in there, check for **declared-but-unused** signals too — a dependency in the manifest that's never imported, a config file (`.eslintrc`, etc.) with no script wired to run it — these are exactly the "looks done but isn't" gaps worth a line in the output CLAUDE.md's Gotchas. |
 
 **When to ask:** only if the *language/runtime* is genuinely undecidable — the description
 names no stack, no repo exists to infer from, and the project type has no single dominant
