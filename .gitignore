@@ -1,0 +1,15 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Node (in case any tooling gets added later)
+node_modules/
+*.log
+
+# Claude Code local/session state — never commit personal or session-specific config
+.claude/settings.local.json
+.claude/session-data/
