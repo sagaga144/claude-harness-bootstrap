@@ -19,7 +19,12 @@
 0. **Check whether a harness already exists** — Step 0. If it does, this becomes a
    gap-fill retrofit, not a fresh bootstrap; the rest of this list still applies, just
    scoped to what's actually missing.
-1. **Profile the project** from the description (and the repo, if one exists) — Step 1.
+1. **Ask the two guided questions, then profile the project** from the description (and
+   the repo, if one exists) — Step 1. The guided pair (cost vs. thoroughness, essentials
+   vs. full setup) comes first, before any file gets written — a couple of quick
+   environment-probing commands (checking for a toolchain, an existing repo) are fine
+   first, but don't move on to Step 2 without having asked or explicitly determined each
+   question is already answered by the description.
 2. **Write a lean, project-specific `CLAUDE.md`** into the project root — Step 2 gives you
    the section-by-section spec; every section is *derived*, not templated.
 3. **Build the `.claude/` harness** — hand off to `HARNESS_REFERENCE.md` Part 1,
@@ -32,11 +37,11 @@
 6. Commit the result on a branch. Never push without being asked.
 
 Don't ask the user to approve each step — do the work, then summarize what you built and
-why. Step 1 opens with two short guiding questions by design (see "Ask two short guiding
-questions first" below) — that's not approval-seeking, it's genuine agency for a user who
-doesn't yet know what choices exist. Beyond that pair, only stop to ask when Step 1 hits a
-genuine fork (see "When to ask beyond this pair"); everything else, make the best call and
-note the assumption in the output CLAUDE.md's Gotchas.
+why. Step 1 opens with two short guiding questions by design (see below) — that's not
+approval-seeking, it's genuine agency for a user who doesn't yet know what choices exist.
+Beyond that pair, only stop to ask when Step 1 hits a genuine fork (see "When to ask
+beyond this pair"); everything else, make the best call and note the assumption in the
+output CLAUDE.md's Gotchas.
 
 ---
 
@@ -76,32 +81,16 @@ is the normal default for a fresh bootstrap.
 
 ---
 
-## Step 1 — Profile the project
+## Step 1 — Ask two guided questions, then profile the project
 
-You need to determine, before writing anything:
-
-| Question | How to find it |
-|---|---|
-| **Language / runtime** | Existing repo: read the manifest (`package.json`, `pyproject.toml`/`requirements.txt`, `go.mod`, `Cargo.toml`, `Gemfile`, `*.csproj`, `pom.xml`/`build.gradle`, `composer.json`, `mix.exs`, `pubspec.yaml`...). Empty repo: infer from the description's explicit mentions ("in Rust", "a FastAPI service") or the closest conventional default for the project type (see below). |
-| **Project type** | One of: web frontend, full-stack web app, backend/API service, CLI tool, library/package, mobile app, browser extension, data/ML pipeline, game, infra/automation, other. Drives dev commands, test story, and deploy story. |
-| **Has a UI?** | Web/mobile/desktop app, or a TUI → yes. Pure library/CLI/backend service → usually no. |
-| **Has persistence?** | Talks to a DB, filesystem-as-store, or external state → yes. |
-| **Has auth or handles secrets/user input directly?** | API keys, login, PII, payment, anything network-facing → yes. |
-| **Multi-language / i18n?** | Only if the description says so or a repo already has translation files. |
-| **Is it a published package/library?** | Public API surface, semver, consumers you can't see → different discipline than an app (see Code Style / Testing below). |
-| **Deploy target, if any** | Named platform (Vercel, Fly, a Docker registry, an app store, PyPI, crates.io...) or "not yet" — don't invent one. |
-| **Existing conventions** | If retrofitting a real repo: read 3-5 existing files to match naming, test framework, and lint config already in use rather than imposing a different one. While you're in there, check for **declared-but-unused** signals too — a dependency in the manifest that's never imported, a config file (`.eslintrc`, etc.) with no script wired to run it — these are exactly the "looks done but isn't" gaps worth a line in the output CLAUDE.md's Gotchas. |
-
-### Ask two short guiding questions first
-
-Before profiling silently and building, ask two short, plain-language questions with a
-recommended default clearly marked on each — this project's whole premise is that someone
-who's never touched Claude Code shouldn't need to know what any of this means, and the
-best way to honor that isn't to guess everything silently and bury the assumptions in a
-Gotchas section, it's to hand them two easy, low-stakes choices and say briefly why each
-one matters. Batch both into a single question call (along with either "When to ask"
-trigger below, if one also applies) rather than separate rounds of back-and-forth — one
-short pause beats several.
+**Ask these two first — before running any exploration beyond Step 0's harness check,
+and before writing a single file.** Plain language, a recommended default clearly marked
+on each, and say briefly why each one matters — this project's whole premise is that
+someone who's never touched Claude Code shouldn't need to know what any of this means,
+and the best way to honor that isn't to guess everything silently and bury the
+assumptions in a Gotchas section afterward, it's to hand them two easy, low-stakes
+choices up front. This is not optional the way most of this file's judgment calls are;
+treat it as a hard gate before Step 2, on par with Step 0's check.
 
 1. **Cost vs. thoroughness.** "How much should I lean toward keeping your Claude usage
    cost down vs. building in maximum thoroughness?" — *Keep cost low (Recommended to
@@ -118,6 +107,22 @@ short pause beats several.
 
 Skip a question only when the description (or an existing harness found in Step 0)
 already makes that specific answer obvious — don't ask what's already been told to you.
+
+### Profile the project
+
+Once the guided pair is settled, determine the rest before writing anything:
+
+| Question | How to find it |
+|---|---|
+| **Language / runtime** | Existing repo: read the manifest (`package.json`, `pyproject.toml`/`requirements.txt`, `go.mod`, `Cargo.toml`, `Gemfile`, `*.csproj`, `pom.xml`/`build.gradle`, `composer.json`, `mix.exs`, `pubspec.yaml`...). Empty repo: infer from the description's explicit mentions ("in Rust", "a FastAPI service") or the closest conventional default for the project type (see below). |
+| **Project type** | One of: web frontend, full-stack web app, backend/API service, CLI tool, library/package, mobile app, browser extension, data/ML pipeline, game, infra/automation, other. Drives dev commands, test story, and deploy story. |
+| **Has a UI?** | Web/mobile/desktop app, or a TUI → yes. Pure library/CLI/backend service → usually no. |
+| **Has persistence?** | Talks to a DB, filesystem-as-store, or external state → yes. |
+| **Has auth or handles secrets/user input directly?** | API keys, login, PII, payment, anything network-facing → yes. |
+| **Multi-language / i18n?** | Only if the description says so or a repo already has translation files. |
+| **Is it a published package/library?** | Public API surface, semver, consumers you can't see → different discipline than an app (see Code Style / Testing below). |
+| **Deploy target, if any** | Named platform (Vercel, Fly, a Docker registry, an app store, PyPI, crates.io...) or "not yet" — don't invent one. |
+| **Existing conventions** | If retrofitting a real repo: read 3-5 existing files to match naming, test framework, and lint config already in use rather than imposing a different one. While you're in there, check for **declared-but-unused** signals too — a dependency in the manifest that's never imported, a config file (`.eslintrc`, etc.) with no script wired to run it — these are exactly the "looks done but isn't" gaps worth a line in the output CLAUDE.md's Gotchas. |
 
 **When to ask beyond this pair:** two further triggers, both narrow on purpose — the
 *don't over-ask* discipline still applies here. (1) The *language/runtime* is genuinely

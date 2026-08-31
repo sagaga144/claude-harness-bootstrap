@@ -1,7 +1,7 @@
 {
   "name": "harness-bootstrap",
   "description": "Bootstraps a complete, project-specific Claude Code harness (CLAUDE.md, hooks, agents, commands, skills, memory loop) from a one-paragraph description of a project idea — for any stack, not just web apps.",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "author": {
     "name": "sagaga144"
   },

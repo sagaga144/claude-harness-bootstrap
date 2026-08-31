@@ -132,6 +132,14 @@ because the specific task in front of it needs Opus-level judgment. Concretely:
   architecture) — not for every project by default. A small CRUD app's plan doesn't need
   Opus; default `planner` to Sonnet for it and say so.
 
+  **A high-stakes domain elsewhere in the project is not, by itself, a reason to escalate
+  `planner`.** A tool whose job includes deleting files, moving money, or touching auth
+  already gets a dedicated Opus reviewer gating exactly that surface — that's what the
+  stakes justify. Planning "add a `--json` flag" isn't harder because the same codebase
+  also deletes files somewhere else; don't let the reviewer's justification bleed into
+  the planner's by association. Only escalate `planner` when the *plan itself* is
+  architecturally hard, independent of what any reviewer downstream will re-check.
+
 If `BOOTSTRAP.md`'s guided cost question got an answer, apply it here: "keep cost low"
 caps every agent at Sonnet or below (drop Opus even where the case above would otherwise
 justify it, prefer Haiku anywhere a check is even loosely mechanical); "maximize quality"
