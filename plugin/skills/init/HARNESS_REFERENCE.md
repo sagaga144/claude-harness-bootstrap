@@ -113,9 +113,35 @@ Claude Code's default caps — 3 layers of subagent nesting, 20 running concurre
 plenty of headroom for a normal review pass; it's a ceiling worth knowing about, not one
 this harness needs to design around.)
 
+**Default every agent to the cheapest model tier that reliably does the job — this is real
+money the user is paying per call, not a rounding error.** The "Model tier" columns below
+are *defaults*, not fixed role assignments — don't hand an agent Opus because its role
+sounds important (a planner isn't automatically a hard reasoning task), hand it Opus
+because the specific task in front of it needs Opus-level judgment. Concretely:
+
+- **Haiku** — mechanical: run a deterministic tool, parse its output, report. `tsc`/`mypy`-backed
+  correctness checks, `i18n-checker`, anything a script could nearly do on its own if not
+  for needing to read output prose.
+- **Sonnet** — the default for real judgment: implementers, most reviewers, and planning
+  for a project of ordinary size and complexity. This is where most agents should land.
+- **Opus** — reserved for the rare case where a wrong call is genuinely expensive *and*
+  the reasoning is genuinely hard: `security-reviewer` when auth/secrets/cross-user data
+  isolation is the actual trait (a missed authz hole is the one mistake in this harness
+  with real consequences), or `planner` **only** when the profile shows real complexity
+  (multiple integrated services, a non-trivial data model or migration, unfamiliar
+  architecture) — not for every project by default. A small CRUD app's plan doesn't need
+  Opus; default `planner` to Sonnet for it and say so.
+
+If `BOOTSTRAP.md`'s guided cost question got an answer, apply it here: "keep cost low"
+caps every agent at Sonnet or below (drop Opus even where the case above would otherwise
+justify it, prefer Haiku anywhere a check is even loosely mechanical); "maximize quality"
+allows Opus wherever the complexity case applies, generously; "balanced" is exactly the
+guidance above, unmodified. State the tier landed on for each agent in the final report,
+with the one-line reason — not just a table the user has to interpret themselves.
+
 | Role | Always build | Model tier |
 | --- | --- | --- |
-| Orchestrator | `project-manager` (routes multi-step work), `planner` (file-precise plan before coding) | Opus (planner), Sonnet (PM) |
+| Orchestrator | `project-manager` (routes multi-step work), `planner` (file-precise plan before coding) | Sonnet for both by default — escalate `planner` to Opus only under the complexity/cost-priority rule above |
 | Implementer | `<domain>-engineer` — one per major layer the project actually has (e.g. `frontend-engineer`, `backend-engineer`, `cli-engineer`) | Sonnet |
 | Correctness reviewer | one reviewer for the primary language's own failure modes (type errors, unhandled `Result`/`Option`, panics, etc. — whatever "compiles but wrong" looks like in this ecosystem) | Haiku if mechanically checkable (e.g. `tsc --noEmit`, `mypy`), else Sonnet |
 | `refactor-cleaner` | evidence-based dead-code sweep using the ecosystem's own tool (`knip`/`ts-prune`/`depcheck` for JS, `vulture` for Python, `go vet`/`deadcode` for Go...) | Sonnet |

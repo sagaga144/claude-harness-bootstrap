@@ -32,8 +32,11 @@
 6. Commit the result on a branch. Never push without being asked.
 
 Don't ask the user to approve each step — do the work, then summarize what you built and
-why. Only stop to ask when Step 1 hits a genuine fork (see "When to ask" below); everything
-else, make the best call and note the assumption in the output CLAUDE.md's Gotchas.
+why. Step 1 opens with two short guiding questions by design (see "Ask two short guiding
+questions first" below) — that's not approval-seeking, it's genuine agency for a user who
+doesn't yet know what choices exist. Beyond that pair, only stop to ask when Step 1 hits a
+genuine fork (see "When to ask beyond this pair"); everything else, make the best call and
+note the assumption in the output CLAUDE.md's Gotchas.
 
 ---
 
@@ -89,13 +92,41 @@ You need to determine, before writing anything:
 | **Deploy target, if any** | Named platform (Vercel, Fly, a Docker registry, an app store, PyPI, crates.io...) or "not yet" — don't invent one. |
 | **Existing conventions** | If retrofitting a real repo: read 3-5 existing files to match naming, test framework, and lint config already in use rather than imposing a different one. While you're in there, check for **declared-but-unused** signals too — a dependency in the manifest that's never imported, a config file (`.eslintrc`, etc.) with no script wired to run it — these are exactly the "looks done but isn't" gaps worth a line in the output CLAUDE.md's Gotchas. |
 
-**When to ask:** two triggers, both narrow on purpose. (1) The *language/runtime* is
-genuinely undecidable — the description names no stack, no repo exists to infer from, and
-the project type has no single dominant default (e.g. "a tool that syncs my notes" could
-be a CLI in almost anything). (2) Step 0 found an existing mature harness — see there for
-how to frame that question. Either way, ask one question, offer the most likely options.
-For everything else — test framework choice, folder layout, which linter — pick the
-ecosystem-conventional default and move on.
+### Ask two short guiding questions first
+
+Before profiling silently and building, ask two short, plain-language questions with a
+recommended default clearly marked on each — this project's whole premise is that someone
+who's never touched Claude Code shouldn't need to know what any of this means, and the
+best way to honor that isn't to guess everything silently and bury the assumptions in a
+Gotchas section, it's to hand them two easy, low-stakes choices and say briefly why each
+one matters. Batch both into a single question call (along with either "When to ask"
+trigger below, if one also applies) rather than separate rounds of back-and-forth — one
+short pause beats several.
+
+1. **Cost vs. thoroughness.** "How much should I lean toward keeping your Claude usage
+   cost down vs. building in maximum thoroughness?" — *Keep cost low (Recommended to
+   start)* / *Balanced* / *Don't worry about cost, maximize quality*. This sets the model
+   tier every agent gets built with (`HARNESS_REFERENCE.md` §1.4) — worth surfacing
+   explicitly rather than deciding silently, since it's real money spent per call and the
+   user may not know it was even a choice.
+2. **How much to build right now.** "Do you want just the essentials working first so you
+   can see it end-to-end quickly, or the fully-hardened setup from the start?" — *Just the
+   essentials for now (Recommended to start)* / *Build the full setup now*. Ties to §1.1:
+   essentials = hooks + 3-4 core agents + `/verify`; full = also orchestrators, the
+   learning loop, and memory sync immediately. Either way, name plainly in the final
+   report what got deferred and how to ask for it later — nothing is lost, just sequenced.
+
+Skip a question only when the description (or an existing harness found in Step 0)
+already makes that specific answer obvious — don't ask what's already been told to you.
+
+**When to ask beyond this pair:** two further triggers, both narrow on purpose — the
+*don't over-ask* discipline still applies here. (1) The *language/runtime* is genuinely
+undecidable — the description names no stack, no repo exists to infer from, and the
+project type has no single dominant default (e.g. "a tool that syncs my notes" could be a
+CLI in almost anything). (2) Step 0 found an existing mature harness — see there for how
+to frame that question. Either way, ask one focused question, offer the most likely
+options. For everything else — test framework choice, folder layout, which linter — pick
+the ecosystem-conventional default and move on.
 
 ---
 
@@ -171,8 +202,9 @@ CLI; no "deploy" row for a project with no deploy target yet).
 
 Same idea throughout: keep the *table shapes and discipline* from a mature harness
 (reviewer >80%-confidence gate, fail-closed verdicts, two human gates around autonomous
-work, Opus only for hard subtasks, INSTINCTS.md + `/learn` loop) — these are genuinely
-universal — but populate every row from the Step 1 profile. `HARNESS_REFERENCE.md`
+work, cheapest-model-that-does-the-job with Opus reserved for genuinely hard/high-stakes
+subtasks per §1.4, INSTINCTS.md + `/learn` loop) — these are genuinely universal — but
+populate every row from the Step 1 profile. `HARNESS_REFERENCE.md`
 §1.4 has the trait → agent derivation table; use it here too so the two files agree. If
 the profile found a real deploy *or release* target, add a Deploy/Release Health Check
 subsection derived from §1.9 — don't assume the live-service flavor by default; a CLI or
@@ -214,5 +246,16 @@ Hand off to `HARNESS_REFERENCE.md`:
   Operator's Manual artifact (real inventory counts, not estimates).
 
 Report back to the user in plain language what got built and why — the stack you
-detected, the agents/hooks you chose and the trait that justified each one, and the one
-or two assumptions you made if the description left anything ambiguous.
+detected, the agents/hooks you chose and the trait that justified each one, the model
+tier each agent landed on and why (see §1.4's cost discipline — this is where the
+cost-priority answer from Step 1 should visibly show up), and the one or two assumptions
+you made if the description left anything ambiguous.
+
+Then close by directing them, not just reporting to them — assume no prior Claude Code
+experience by default, since that's who this whole process is built for. Give 2-3 example
+things they could literally type next, written for *their* project specifically (not
+generic placeholders — "try: 'add a login page'" beats "try: 'add a feature'"); say
+plainly that they never need to learn a command or name an agent, plain language always
+works; and point to the Operator's Manual link as where to look if they get stuck later.
+If Step 1's second question got "essentials only," name the concrete thing or two that
+got deferred and how to ask for it when ready.
