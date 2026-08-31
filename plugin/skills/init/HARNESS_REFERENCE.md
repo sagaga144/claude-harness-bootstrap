@@ -216,6 +216,17 @@ before the inner simulated call ever runs. Use a file-based fixture and redirect
 inside the piped file content, never in the Bash command text the live hook actually
 scans.
 
+**Any hook that shells out (`execSync`/`spawnSync` — a git diff, a linter, a type-checker)
+must explicitly control the child's `stdio`, not rely on Node's default.** By default a
+child's stderr is inherited straight through to the parent process, so a failing subprocess
+prints its raw error output into the transcript even when the hook's own `try/catch`
+correctly fails open — the block never happens, but it *looks* broken. Concretely:
+`execSync(cmd, { stdio: ["ignore", "pipe", "pipe"] })` and read the output off `err.stdout`/
+`err.message` in the catch block, don't let it print itself. This bit a real secret-scan hook
+that ran `git diff --cached` before the repo had a first commit — no error text like "not a
+git repository," just git falling back to `--no-index` mode and dumping its full ~130-line
+usage text to stderr on every verification run.
+
 ### 1.9 Release / deploy health check
 
 Only build this if Step 1's "Deploy target, if any" wasn't "not yet." "Shipping" means one
