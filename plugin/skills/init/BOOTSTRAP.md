@@ -195,6 +195,15 @@ fit — build a small package × command matrix instead (one row per package, us
 whichever of the rows above matches that package's own ecosystem), so a reader knows
 which command runs where rather than guessing it applies repo-wide.
 
+Some domains genuinely have no pass/fail test framework at all — real-time audio, DSP,
+anything where "correct" means a human judgment call, a static safety property, or
+numeric output inspection rather than an assertion. Don't force a nonexistent "run tests"
+command into this table; say so explicitly and derive whatever verification story
+actually fits (a static/manual review as the primary check, an offline numeric-analysis
+technique if one exists for the domain, a real listening/inspection step as ground
+truth) — name it as derived, not as convention, the same honesty this table already
+expects elsewhere.
+
 If the ecosystem has a known **type-check gap** (bundlers that transpile without
 type-checking — Vite/esbuild/SWC for TS; a Python project with no static typing pass at
 all), call it out explicitly the way the original web example did for `tsc --noEmit` —
