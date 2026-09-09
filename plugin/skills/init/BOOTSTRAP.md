@@ -187,6 +187,7 @@ Pull real commands for the detected ecosystem — don't guess syntax.
 | Python | `pytest`, `ruff check .` / `ruff format`, `python -m mypy .` if typed |
 | Go | `go build ./...`, `go test ./...`, `go vet ./...` |
 | Rust | `cargo build`, `cargo test`, `cargo clippy` |
+| Terraform/infra-as-code | `terraform validate`, `terraform plan` (the real "test" — a sane diff, not pass/fail), `terraform fmt -check`; `terraform test` (native `.tftest.hcl` assertions, real since 1.6) if the project's scale actually warrants written test cases rather than plan-review alone |
 
 If the ecosystem has a known **type-check gap** (bundlers that transpile without
 type-checking — Vite/esbuild/SWC for TS; a Python project with no static typing pass at
