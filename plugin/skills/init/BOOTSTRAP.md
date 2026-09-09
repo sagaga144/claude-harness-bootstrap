@@ -188,6 +188,7 @@ Pull real commands for the detected ecosystem — don't guess syntax.
 | Go | `go build ./...`, `go test ./...`, `go vet ./...` |
 | Rust | `cargo build`, `cargo test`, `cargo clippy` |
 | Terraform/infra-as-code | `terraform validate`, `terraform plan` (the real "test" — a sane diff, not pass/fail), `terraform fmt -check`; `terraform test` (native `.tftest.hcl` assertions, real since 1.6) if the project's scale actually warrants written test cases rather than plan-review alone |
+| Solidity/Hardhat | `npx hardhat compile`, `npx hardhat test` (deterministic unit tests, the baseline); this ecosystem's testing story goes beyond "run the test command" the way nothing else in this table does — fuzz/invariant testing (Foundry's `forge fuzz`/`forge test --fuzz`, property-based against arbitrary call sequences) and gas-cost regression snapshots are a genuinely different, higher-value technique for exactly this domain's real failure modes (reentrancy, invariant violations), not an optional extra — name it explicitly as a "build later" addition rather than letting essentials-tier `npm test` alone imply full coverage |
 
 For a monorepo, this table's single "one project type → one command set" shape doesn't
 fit — build a small package × command matrix instead (one row per package, using
