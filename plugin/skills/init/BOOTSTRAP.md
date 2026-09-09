@@ -172,6 +172,11 @@ stack-agnostic, keep it near-verbatim. Then:
 **Deployed on:** <real target, or "not yet — local only">
 ```
 
+If the description names no project name at all, pick a short, reasonable one yourself
+and say so in Gotchas as an assumption — don't leave a placeholder in the output, and
+don't treat naming it as ambiguous enough to ask about (it's cheap to rename later, not a
+genuine fork).
+
 ### Dev Commands
 
 Pull real commands for the detected ecosystem — don't guess syntax.
