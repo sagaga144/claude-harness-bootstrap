@@ -29,34 +29,56 @@ A "complete" harness is five kinds of file working together, all under `.claude/
     <name>/SKILL.md
   hooks/                     # Node .cjs scripts for PreToolUse/PostToolUse/etc.
     <name>.cjs
-  rules/                     # reference detail, pointed to by name from CLAUDE.md
+  rules/                     # auto-loaded reference detail — always, or path-scoped
     <name>.md
-  agent-memory/
-    INSTINCTS.md             # confidence-scored learnings, session-injected
-    <agent>/MEMORY.md        # per-agent durable notes
-    <agent>/DECISIONS/       # ADRs that agent has made
   specs/                     # durable feature docs (blueprint steps, plans)
     <feature>/
   session-data/              # ephemeral, gitignored — handoffs, scratch state
 ```
 
-Not every project needs all of it on day one. Build hooks + 3-4 core agents + `/verify` first; add orchestrators, the learning loop, and memory sync once the basics are solid.
+Not every project needs all of it on day one. Build hooks + 3-4 core agents + `/verify`
+first; add orchestrators once the basics are solid.
+
+**Don't build a custom cross-session memory loop by default — Claude Code already has
+one.** Auto memory (on by default, no harness setup required) has Claude write its own
+typed notes — `user`/`feedback`/`project`/`reference` — to
+`~/.claude/projects/<project>/memory/` as it works, indexed by a `MEMORY.md` that's
+auto-injected every session, with topic files loaded on demand and a `modified` timestamp
+so staleness is visible. A hand-built `agent-memory/INSTINCTS.md` + a `SessionStart`
+injector hook + a custom `/learn` command duplicates infrastructure Claude Code now ships
+natively, at the cost of extra hooks to write, verify, and maintain. Don't generate that
+trio by default; instead have CLAUDE.md say plainly that the project relies on Claude
+Code's built-in auto memory (`/memory` to browse/edit it) rather than a custom system.
+The one case worth a custom memory-adjacent mechanism: auto memory is **machine-local,
+not synced or shared** — a team that wants learnings committed to the repo and shared
+across machines still needs the optional `Stop`-hook memory mirror in §1.2's hook table,
+one-way-syncing to a committed file or external store. Durable *project domain knowledge*
+(a ledger model, a settle-up algorithm, a safety-invariants list) isn't memory in this
+sense at all — that's real content a human/Claude wrote deliberately, and belongs in
+`specs/` or a Skill, not in either memory system.
 
 ### 1.2 Hooks — the mechanical layer
 
-Hooks are the only part of the harness that runs with certainty — rules in CLAUDE.md are read and (usually) followed; hooks execute. **Write every hook script in Node (`.cjs`), regardless of the project's own language** — hooks are harness tooling that Claude Code itself runs, not project code, and Node is what's guaranteed present and cross-platform; a Python or Go or Rust project still gets Node hook scripts, they just shell out to `pytest`/`go vet`/`cargo check`/etc. as needed. Two hook types, pick per check:
+Hooks are the only part of the harness that runs with certainty — rules in CLAUDE.md are read and (usually) followed; hooks execute. **Write every `command`-type hook script in Node (`.cjs`), regardless of the project's own language** — hooks are harness tooling that Claude Code itself runs, not project code, and Node is what's guaranteed present and cross-platform; a Python or Go or Rust project still gets Node hook scripts, they just shell out to `pytest`/`go vet`/`cargo check`/etc. as needed. Four hook types, pick per check:
 
 | Type | Use for | Cost |
 | --- | --- | --- |
 | `command` (`.cjs` in `.claude/hooks/`) | Deterministic checks — regex, file existence, exit codes | instant, free |
-| `agent` (inline prompt) | Judgment calls a regex can't make — "do these translation files' keys match" | one model call, only when its `if` matcher fires |
+| `prompt` | A single judgment call a regex can't make — "do these translation files' keys match" — sent to a model (Haiku by default) with no tool access, just the hook's input data | one fast model call, only when its matcher fires |
+| `agent` | Verification that needs to *read files or run commands* to decide — spawns a real subagent with tool access, not just a single LLM judgment | one subagent call — costs more than `prompt`, reserve for checks a single judgment can't make |
+| `http` | POST the event JSON to an external endpoint, get the same allow/block JSON back — team-wide compliance logging, an external policy service | network call — rare, mostly a team/org concern |
+
+This harness defaults to `command` for every deterministic check and reaches for `prompt`
+only where the standard hook inventory below already calls for a judgment call (i18n/parity
+checks); don't reach for `agent` or `http` by default — they're real, available escalations
+for a project that genuinely needs them; naming a couple of hooks below doesn't mean every
+project gets them.
 
 Standard hook inventory by lifecycle event:
 
 | Event | Hook | Does |
 | --- | --- | --- |
 | `SessionStart` | critical-rules injector | Prints the 5-8 rules that must never be forgotten |
-| `SessionStart` | instinct injector | Reads `INSTINCTS.md`, prints top-N by confidence |
 | `SessionStart` | inbox reader (optional) | Injects notes dropped from outside the session (e.g. a synced vault) |
 | `PreToolUse: Bash` | push/deploy/release guard | Blocks `git push`, a deploy command, or a release-publish command (`git push --tags`, `npm publish`, `cargo publish`, `goreleaser release`, `twine upload`...) unless an env override is set |
 | `PreToolUse: Bash` | secret scan | Blocks `git commit` if the staged diff contains a key/JWT/token pattern |
@@ -64,26 +86,38 @@ Standard hook inventory by lifecycle event:
 | `PreToolUse: Edit\|Write` | protected-file guard | Blocks edits to `.env`, lockfiles, etc. |
 | `PostToolUse: Edit\|Write` | console.log warn | Flags stray `console.log` in shipped source |
 | `PostToolUse: Edit\|Write` | domain-guard note | e.g. "verify the config-check guard on this data-layer file" |
-| `PostToolUse: Edit\|Write` (agent type) | i18n / parity check | LLM judgment check, cheap model, scoped `if` matcher |
+| `PostToolUse: Edit\|Write` (`prompt` type) | i18n / parity check | LLM judgment check, cheap model, scoped `if` matcher |
+| `PreModelSwitch` (optional) | cost guard | If Step 1's guided cost answer was "keep cost low," block a switch to a pricier model the session didn't explicitly ask for — ties the cost-priority choice to an actual enforcement point, not just an agent-file default |
 | `Stop` | build/type-check gate | Runs the build once per turn-completion, blocks with actionable errors on failure |
-| `Stop` (optional) | memory mirror | One-way sync of `agent-memory/` + `specs/` to an external store |
+| `Stop` (optional) | memory mirror | For a team that wants learnings synced/shared rather than machine-local — one-way sync of auto memory's project directory + `specs/` to a committed file or external store; see §1.1's memory note for why this is opt-in, not default |
 
 Every blocking guard gets **one env-var override** (`ALLOW_PUSH=1`, etc.) for the rare deliberate case, and **fails open** on its own internal error — a bug in a guard must never wedge a session shut. For the `Stop` build/type-check gate specifically: Claude Code itself overrides a `Stop` hook and ends the turn after 8 consecutive blocks, so a genuinely broken build won't wedge the session shut forever even if the gate script has no bug — but don't rely on that as your only safety net, since 8 blocked turns is still a bad loop to sit through. For gating an *unattended* multi-turn run against a condition rather than a single turn's build, the built-in `/goal` command (a separate evaluator re-checks the condition after every turn) is often a better fit than a `Stop` hook.
 
-### 1.3 Rules vs. Skills — two different loading contracts, don't conflate them
+### 1.3 Rules vs. Skills — three loading contracts, don't conflate them
 
-`.claude/rules/*.md` isn't a Claude Code loading mechanism — nothing auto-loads a rules file
-just because a matching file got edited. Use `rules/` only for reference content you point
-to by name from CLAUDE.md prose ("see `.claude/rules/testing.md`") or a genuine `@path`
-import (which *is* real, but always-loaded — defeats the point if the content is only
-sometimes relevant). For anything that should load **on demand, based on what the task
-actually is** — the real, official mechanism for that is a **Skill**
-(`.claude/skills/<name>/SKILL.md`): Claude scans available skills' `description`
-frontmatter and loads the body only when it matches the task, via progressive disclosure.
-Prefer a skill over a rules file whenever the content is domain knowledge or a workflow
-that doesn't apply to every session — `code-style.md`/`testing.md`-type universal
-conventions can stay a plain rules file; `i18n.md`/`a11y.md`-type detail that only matters
-for some edits is a better fit as a skill with a precise `description`.
+`.claude/rules/*.md` **is** a real, automatic Claude Code loading mechanism — this harness
+used to treat it as inert reference-only content; that's out of date. A rules file with no
+`paths:` frontmatter loads unconditionally, at the same priority as `.claude/CLAUDE.md` —
+so treating every rules file as "always loaded" is *correct* for that case, and putting
+universal content there instead of in CLAUDE.md only helps if CLAUDE.md itself is getting
+long. The more useful case is **path-scoped rules**: add `paths:` frontmatter (a glob list,
+e.g. `src/api/**/*.ts`) and the file loads only when Claude reads a matching file — real
+progressive disclosure, triggered by *which files are in play*, not by task-description
+matching. Use this for conventions that only apply to one part of the codebase (API-handler
+rules, a data-layer's query conventions) so they don't cost context on every session.
+
+That leaves three tiers, pick by *what triggers the load*:
+
+| Mechanism | Loads when | Best for |
+| --- | --- | --- |
+| `CLAUDE.md` | Every session, unconditionally | The handful of things every session needs — keep this one lean |
+| `.claude/rules/<name>.md` with `paths:` | Claude reads a file matching the glob | Conventions scoped to one area of the codebase (`src/api/**`, `src/data/**`) |
+| `.claude/rules/<name>.md` with no `paths:` | Every session, unconditionally (same tier as CLAUDE.md) | Universal content split out only to keep CLAUDE.md itself short — not a different trigger, just a different file |
+| `.claude/skills/<name>/SKILL.md` | Claude judges the *task* matches the skill's `description` | Domain knowledge or a multi-step workflow that isn't tied to specific file paths — `i18n.md`/`a11y.md`-type detail, an algorithm writeup, an orchestration recipe |
+
+Prefer a path-scoped rule over a skill when the trigger is genuinely "which files is this
+touching" (mechanical, glob-matchable); prefer a skill when the trigger is "what kind of
+task is this" (judgment-based, no reliable file-path signal).
 
 ### 1.4 Agents — pick by trait, not by stack name
 
@@ -147,6 +181,22 @@ allows Opus wherever the complexity case applies, generously; "balanced" is exac
 guidance above, unmodified. State the tier landed on for each agent in the final report,
 with the one-line reason — not just a table the user has to interpret themselves.
 
+A `fable` alias also exists alongside `haiku`/`sonnet`/`opus` in agent frontmatter — it
+isn't a cheap tier, it's positioned *above* Opus for genuinely open-ended, extended-session
+work (a large ambiguous investigation, an autonomous multi-hour task) rather than a bounded
+review or plan. It has no place as any agent's default; if a project's own workflow
+genuinely needs an agent that holds a long, ambiguous investigation without losing the
+thread, that's the (rare) case for it, gated behind the same "maximize quality" cost
+answer Opus requires, never the default.
+
+For a task too large for one agent's context — a codebase-wide audit, a large mechanical
+migration, cross-checked multi-source research — Claude Code's Workflow tool (triggered
+with the `ultracode` keyword, or a saved `.claude/workflows/*.js` script) orchestrates many
+subagents from a script rather than Claude coordinating them turn by turn. This is a
+user-invoked escalation, not something to build into the default harness — mention it in
+the generated CLAUDE.md only if the project's own scale makes it a likely real need (a
+large monorepo migration, a recurring wide audit), not as boilerplate every project gets.
+
 | Role | Always build | Model tier |
 | --- | --- | --- |
 | Orchestrator | `project-manager` (routes multi-step work), `planner` (file-precise plan before coding) | Sonnet for both by default — escalate `planner` to Opus only under the complexity/cost-priority rule above |
@@ -192,17 +242,19 @@ Two mechanical details every agent file needs right in its frontmatter, not left
 
 ### 1.5 Commands & skills — the invoked layer
 
-- **Commands** (`.claude/commands/<name>.md`): single-purpose, flat. `/verify`, `/new-page`, `/learn`, `/save-session`.
-- **Skills** (`.claude/skills/<name>/SKILL.md`): multi-step, may bundle scripts, may spawn agents internally. Orchestrators (`orch-add-feature`, `orch-fix-defect`, `orch-refine-code`), decision aids (`council`, `blueprint`), maintenance (`context-budget`, `upgrade`, `dream`).
+- **Commands** (`.claude/commands/<name>.md`): single-purpose, flat. `/verify`, `/new-page`, `/save-session`.
+- **Skills** (`.claude/skills/<name>/SKILL.md`): multi-step, may bundle scripts, may spawn agents internally. Orchestrators (`orch-add-feature`, `orch-fix-defect`, `orch-refine-code`), decision aids (`council`, `blueprint`), maintenance (`context-budget`, `upgrade`).
 
-Minimum viable set: `/verify` (build → type-check → tests → domain-guard scan → READY/NOT-READY), `/full-review` (multi-dimension, fail-closed), one orchestrator (`orch-add-feature`), `/learn` + `/save-session` + `/resume-session` for the memory loop.
+Minimum viable set: `/verify` (build → type-check → tests → domain-guard scan → READY/NOT-READY), `/full-review` (multi-dimension, fail-closed), one orchestrator (`orch-add-feature`), `/save-session` + `/resume-session` for session handoffs.
 
 ### 1.6 Memory — what makes the harness get sharper over time
 
-- `INSTINCTS.md` — one atomic, confidence-scored line per learning: `- [conf:0.8 seen:YYYY-MM-DD] when <signal> → <action>`. Injected top-N at every `SessionStart`. Grown by `/learn`, pruned by `dream`.
-- `agent-memory/<agent>/MEMORY.md` — durable per-agent notes; `DECISIONS/` for ADRs.
-- `specs/<feature>/` — durable feature docs: a `blueprint` decomposition, a planner's `IMPLEMENTATION_PLAN`. One folder per feature, not loose root-level files.
-- Optional: a one-way mirror of `agent-memory/` + `specs/` into an external note vault (e.g. Obsidian) via a `Stop` hook, plus a `SessionStart` hook that reads back an `Inbox/` folder for notes dropped from outside the session. Fail-open if the external store is offline — the repo stays canonical either way.
+Default to Claude Code's own **auto memory** (on by default — see §1.1) rather than
+building a custom system; nothing to generate here for the common case beyond the one
+CLAUDE.md line §1.1 already covers. What the harness *does* still build:
+
+- `specs/<feature>/` — durable feature docs: a `blueprint` decomposition, a planner's `IMPLEMENTATION_PLAN`. One folder per feature, not loose root-level files. This is deliberate content someone wrote, not learned-over-time memory — keep it distinct from auto memory even though both live under `.claude/`-adjacent paths conceptually.
+- Optional, team-shared case only: a one-way mirror of auto memory's project directory + `specs/` into an external note vault (e.g. Obsidian) or a committed file via a `Stop` hook, plus a `SessionStart` hook that reads back an `Inbox/` folder for notes dropped from outside the session. Fail-open if the external store is offline. Build this only when the project is explicitly a team project wanting shared/synced learnings — auto memory alone is correct for a solo project.
 
 ### 1.7 `settings.json` — wiring it all together
 
@@ -316,10 +368,10 @@ This is the shape that worked — reuse it, filling each section from the real i
 | 01 | The one idea: three ways it acts | Three cards — **Automatic** (hooks fire unasked), **Routed** (plain language → Intent Router), **Invoked** (you name a slash command/skill). This is the single mental model the whole page teaches. |
 | 02 | What runs automatically | A table of every hook, grouped by lifecycle event (session start / before commit / before push / before a read / after an edit / session end), one row each, in plain language — not the raw hook name. |
 | 03 | Just describe it — the router picks the tool | A sample table: `<span class="say">what you'd type</span>` → the agent/command it routes to. Pull 8-10 real rows straight from CLAUDE.md's Intent Router. |
-| 04 | The toolbox — when you want to name it | A card grid grouped by *workflow goal* (Ship safely / Build a feature / Plan & decide / Review & harden / Teach it — remember / Maintain the harness), not by agent-vs-skill taxonomy — the user thinks in goals. |
-| 05 | Memory & the learning loop | A table of every memory store (instincts, agent memory, specs, optional external sync), what it holds, and where to edit it. Only include if the project actually has a learning loop. |
+| 04 | The toolbox — when you want to name it | A card grid grouped by *workflow goal* (Ship safely / Build a feature / Plan & decide / Review & harden / Maintain the harness), not by agent-vs-skill taxonomy — the user thinks in goals. |
+| 05 | Memory | For the common case: a short note that Claude Code remembers corrections and preferences on its own (`/memory` to browse/edit), nothing to configure. Only becomes a real table — every memory store, what it holds, where to edit it — if the project built the optional team-sync mirror from §1.6; drop the section entirely rather than pad it if neither applies. |
 | 06 | Playbooks — say this, get that | 6-9 concrete `<when> → <do this>` rows for the highest-leverage moves: starting a feature, something's broken, about to commit, a big multi-session build, a judgment call, correcting the harness, wrapping up, switching topics. |
-| 07 | Escape hatches & habits | Two columns: every guard's env-var override (name it exactly), and 4-5 habits that compound (talk plainly, commit freely because guards catch mistakes, feed the memory, gate before shipping, let it self-escalate models). |
+| 07 | Escape hatches & habits | Two columns: every guard's env-var override (name it exactly), and 4-5 habits that compound (talk plainly, commit freely because guards catch mistakes, correct it out loud so it's remembered, gate before shipping, let it self-escalate models). |
 
 Footer: any manual step still on the human (restart the CLI to load new hooks, open an external vault, etc.) — be honest about what isn't automatic yet.
 
@@ -384,8 +436,9 @@ This is the actual structural + style skeleton the reference implementation used
   <h2>04 The toolbox — when you want to name it</h2>
   <!-- .groups grid of .grp cards, grouped by workflow goal -->
 
-  <h2>05 Memory & the learning loop</h2>
-  <!-- .tablewrap table: Store | What it is | Edit where — omit section if no memory layer -->
+  <h2>05 Memory</h2>
+  <!-- short note on built-in auto memory for the common case; a real table only if the
+       project built the optional team-sync mirror — omit the whole section otherwise -->
 
   <h2>06 Playbooks — say this, get that</h2>
   <!-- .plays list of .play rows: When | Do this -->

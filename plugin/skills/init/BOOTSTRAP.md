@@ -101,9 +101,9 @@ treat it as a hard gate before Step 2, on par with Step 0's check.
 2. **How much to build right now.** "Do you want just the essentials working first so you
    can see it end-to-end quickly, or the fully-hardened setup from the start?" — *Just the
    essentials for now (Recommended to start)* / *Build the full setup now*. Ties to §1.1:
-   essentials = hooks + 3-4 core agents + `/verify`; full = also orchestrators, the
-   learning loop, and memory sync immediately. Either way, name plainly in the final
-   report what got deferred and how to ask for it later — nothing is lost, just sequenced.
+   essentials = hooks + 3-4 core agents + `/verify`; full = also orchestrators and (for a
+   team project) memory sync. Either way, name plainly in the final report what got
+   deferred and how to ask for it later — nothing is lost, just sequenced.
 
 Skip a question only when the description (or an existing harness found in Step 0)
 already makes that specific answer obvious — don't ask what's already been told to you.
@@ -138,10 +138,14 @@ the ecosystem-conventional default and move on.
 ## Step 2 — Write the project's `CLAUDE.md`
 
 Keep the *output* file lean — it loads every session, so no fat: aim for the tables and
-brevity of the shape below, not an essay. Fill every section with real content derived
-from the Step 1 profile. Where a subsection below shows examples across a couple of
-stacks, that's to make the *pattern* concrete — derive the equivalent for whatever you
-actually profiled, not literally one of the examples shown.
+brevity of the shape below, not an essay, and **target under 200 lines**. This isn't just
+house style — longer CLAUDE.md files measurably reduce how consistently Claude follows
+them. If a real project's needs genuinely exceed that, don't pad past it either; split the
+overflow into a path-scoped rule (loads only for the files it applies to — see
+`HARNESS_REFERENCE.md` §1.3) rather than letting the always-loaded file grow. Fill every
+section with real content derived from the Step 1 profile. Where a subsection below shows
+examples across a couple of stacks, that's to make the *pattern* concrete — derive the
+equivalent for whatever you actually profiled, not literally one of the examples shown.
 
 **The leanness test, per line**: would removing this line cause Claude to make a mistake
 it otherwise wouldn't? If not, cut it. Concretely: include Bash commands Claude can't
@@ -202,18 +206,28 @@ build in Step 3. The *shape* is universal; the targets are project-specific:
 Drop rows for capabilities the project doesn't have (no i18n row for a single-language
 CLI; no "deploy" row for a project with no deploy target yet).
 
-### Must-Do Automatics, Agents, Commands & Skills, Learning Loop, Orchestration & Gates,
+### Must-Do Automatics, Agents, Commands & Skills, Orchestration & Gates,
 ### Model Routing, MCP Servers
 
 Same idea throughout: keep the *table shapes and discipline* from a mature harness
 (reviewer >80%-confidence gate, fail-closed verdicts, two human gates around autonomous
 work, cheapest-model-that-does-the-job with Opus reserved for genuinely hard/high-stakes
-subtasks per §1.4, INSTINCTS.md + `/learn` loop) — these are genuinely universal — but
-populate every row from the Step 1 profile. `HARNESS_REFERENCE.md`
-§1.4 has the trait → agent derivation table; use it here too so the two files agree. If
-the profile found a real deploy *or release* target, add a Deploy/Release Health Check
-subsection derived from §1.9 — don't assume the live-service flavor by default; a CLI or
-library's "shipping" means a release pipeline finishing, not a URL reaching "ready."
+subtasks per §1.4) — these are genuinely universal — but populate every row from the
+Step 1 profile. `HARNESS_REFERENCE.md` §1.4 has the trait → agent derivation table; use it
+here too so the two files agree. If the profile found a real deploy *or release* target,
+add a Deploy/Release Health Check subsection derived from §1.9 — don't assume the
+live-service flavor by default; a CLI or library's "shipping" means a release pipeline
+finishing, not a URL reaching "ready."
+
+**Don't add a "Learning Loop" section describing a custom memory system** — Claude Code's
+own auto memory (on by default, no harness setup needed) already covers cross-session
+learning; see `HARNESS_REFERENCE.md` §1.1 for why a hand-built `INSTINCTS.md`/`/learn`
+trio is now redundant. Instead, one short line under Project-Specific Notes is enough:
+that the project relies on Claude Code's built-in auto memory rather than a custom system,
+and `/memory` is how to browse or edit what it's saved. Only add the real memory-mirror
+machinery from §1.2's hook table if the project is a team project that specifically needs
+memory synced/shared rather than machine-local — say so explicitly if you build it, since
+it's the exception, not the default.
 
 ### Code Style / Testing / Security / Environment Variables
 

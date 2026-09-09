@@ -8,8 +8,8 @@
     {
       "name": "harness-bootstrap",
       "source": "./plugin",
-      "description": "Bootstraps a complete, project-specific Claude Code harness (CLAUDE.md, hooks, agents, commands, skills, memory loop) from a one-paragraph description of a project idea — for any stack, not just web apps.",
-      "version": "0.4.1",
+      "description": "Bootstraps a complete, project-specific Claude Code harness (CLAUDE.md, hooks, agents, commands, skills) from a one-paragraph description of a project idea — for any stack, not just web apps.",
+      "version": "0.5.0",
       "author": {
         "name": "sagaga144"
       }
