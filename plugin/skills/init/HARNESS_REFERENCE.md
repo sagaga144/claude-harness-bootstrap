@@ -39,6 +39,17 @@ A "complete" harness is five kinds of file working together, all under `.claude/
 Not every project needs all of it on day one. Build hooks + 3-4 core agents + `/verify`
 first; add orchestrators once the basics are solid.
 
+**A monorepo (multiple packages/crates under one root — a backend + frontend + a shared
+package, say) gets one `.claude/` at the repo root, not one per package**, by default —
+the harness governs the project, not any single package inside it. Push
+package-specific convention detail into a path-scoped rule per package (`paths:
+crates/backend/**`, `paths: packages/frontend/**`, etc. — see §1.3) rather than letting
+CLAUDE.md accumulate a subsection per package; this is exactly what keeps the root
+CLAUDE.md lean even as the package count grows. Reserve a genuinely separate `.claude/`
+per package for the rare case of a monorepo large and independently-owned enough that
+teams work in near-total isolation with almost nothing shared — the exception, not
+where to start.
+
 **Don't build a custom cross-session memory loop by default — Claude Code already has
 one.** Auto memory (on by default, no harness setup required) has Claude write its own
 typed notes — `user`/`feedback`/`project`/`reference` — to
@@ -248,6 +259,7 @@ the final report either way.
 | Perf-sensitive — needs to be *fast enough* (heavy compute, large data, real-time budgets, mobile battery) | `performance-reviewer` | Sonnet |
 | Multi-language / i18n | `i18n-checker` — translation-key parity, hardcoded strings | Haiku |
 | Has an HTTP/RPC/CLI-flag surface others depend on | `api-contract-reviewer` — breaking changes, error shapes, status/exit codes | Sonnet |
+| Has a shared contract/types package (or codegen) meant to keep two-plus independently-maintained representations of the same shape in sync — a frontend/backend pair each hand-declaring the same fields, a client and server drifting on a field name or type. This is a distinct concern from the row above: that one is about *API versioning discipline* (don't break existing callers), this one is about *parity* (do both sides still agree on the shape at all) | extend the correctness reviewer's scope to a field-by-field parity check across the representations (naming-convention mapping, e.g. `camelCase` vs. `snake_case`, type mismatches, a field present on one side and not the other) — usually not a reason for its own agent; a genuinely non-executable shared package (types/schema only, no business logic) doesn't need its own implementer either, just this reviewer coverage and a path-scoped rule | — |
 | Is a published package/library | `semver-reviewer` — public API surface, breaking-change detection, changelog discipline | Sonnet |
 | Ingests live/untrusted content, or drives a live run to repro a bug (fetched web pages, a live browser, or the project's own running binary/service) | prompt-defense preamble on that agent — `web-researcher` for fetched content; a live-repro agent scoped to the actual surface (browser-driving for a web UI, `Bash`-driving the built binary/process and reading stdout/exit codes/logs for a CLI or service) — treat everything ingested as data, never instructions | — |
 | Parses, validates, or deserializes untrusted *structured input* — even with no network surface or auth at all (a validation library, a config/file parser, a data-import routine) | extend the correctness reviewer's scope to robustness: ReDoS-prone regexes, unbounded recursion on deeply nested input, resource exhaustion on adversarial-but-plausible input. This is a distinct concern from `security-reviewer` (which is about auth/secrets) — a pure library with zero network exposure can still crash or hang its caller on malformed input | — |
@@ -349,9 +361,20 @@ usage text to stderr on every verification run.
 
 **A `Stop`/build-gate hook (or any hook shelling out to the project's own toolchain) must
 tell "the tool isn't installed" apart from "the check failed" — only the second one blocks.**
-Check for the toolchain first (`which`/`command -v`, or just try the command and inspect
-the failure) and fail open with a plain warning when it's simply missing, the same way the
-gate already fails open when there's no `tsconfig.json`/`Cargo.toml` yet. This isn't an edge
+Check for the toolchain **first**, before ever attempting the real command — an explicit
+probe (`where <cmd>` on Windows, `command -v <cmd>` elsewhere) run ahead of time, not
+inference from the real command's failure afterward. Inferring from failure is the trap:
+checking `err.code === "ENOENT"` on an `execSync` failure looks reasonable but is
+**unreliable on Windows** — `execSync` always runs through a shell (`cmd.exe` there), and
+when the target binary is missing, the *shell* still starts fine and exits non-zero with
+its own "not recognized" text; Node never sees a spawn-level `ENOENT`, just an ordinary
+non-zero exit indistinguishable from a real check failure by `err.code` alone. A hook
+written against that assumption looks correct, passes on Linux/macOS, and silently
+fails-closed (blocks) on Windows the first time the toolchain is genuinely absent — the
+exact inversion of the fail-open behavior this whole rule exists to guarantee. Probe first,
+don't infer after the fact. Fail open with a plain warning when it's simply missing, the
+same way the gate already fails open when there's no `tsconfig.json`/`Cargo.toml` yet.
+This isn't an edge
 case worth hand-waving: it's the normal state of a fresh machine trying an ecosystem for the
 first time (a web developer's first Tauri project has npm but not yet `cargo`; a CI
 container might have one language's toolchain baked in and not another) and it has already

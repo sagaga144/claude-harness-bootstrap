@@ -189,6 +189,11 @@ Pull real commands for the detected ecosystem — don't guess syntax.
 | Rust | `cargo build`, `cargo test`, `cargo clippy` |
 | Terraform/infra-as-code | `terraform validate`, `terraform plan` (the real "test" — a sane diff, not pass/fail), `terraform fmt -check`; `terraform test` (native `.tftest.hcl` assertions, real since 1.6) if the project's scale actually warrants written test cases rather than plan-review alone |
 
+For a monorepo, this table's single "one project type → one command set" shape doesn't
+fit — build a small package × command matrix instead (one row per package, using
+whichever of the rows above matches that package's own ecosystem), so a reader knows
+which command runs where rather than guessing it applies repo-wide.
+
 If the ecosystem has a known **type-check gap** (bundlers that transpile without
 type-checking — Vite/esbuild/SWC for TS; a Python project with no static typing pass at
 all), call it out explicitly the way the original web example did for `tsc --noEmit` —
