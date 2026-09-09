@@ -100,10 +100,13 @@ treat it as a hard gate before Step 2, on par with Step 0's check.
    user may not know it was even a choice.
 2. **How much to build right now.** "Do you want just the essentials working first so you
    can see it end-to-end quickly, or the fully-hardened setup from the start?" — *Just the
-   essentials for now (Recommended to start)* / *Build the full setup now*. Ties to §1.1:
-   essentials = hooks + 3-4 core agents + `/verify`; full = also orchestrators and (for a
-   team project) memory sync. Either way, name plainly in the final report what got
-   deferred and how to ask for it later — nothing is lost, just sequenced.
+   essentials for now (Recommended to start)* / *Build the full setup now*. Ties to §1.1
+   and §1.4's explicit essentials tiebreak: essentials = hooks + `/verify` + the small,
+   priority-ordered agent set §1.4 spells out (never silently dropping a stakes-justified
+   reviewer to hit a number); full = also `refactor-cleaner`/`silent-failure-hunter`/
+   ordinary trait reviewers and (for a team project) memory sync. Either way, name plainly
+   in the final report what got deferred and how to ask for it later — nothing is lost,
+   just sequenced.
 
 Skip a question only when the description (or an existing harness found in Step 0)
 already makes that specific answer obvious — don't ask what's already been told to you.

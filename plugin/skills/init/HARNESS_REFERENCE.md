@@ -87,7 +87,7 @@ Standard hook inventory by lifecycle event:
 | `PostToolUse: Edit\|Write` | console.log warn | Flags stray `console.log` in shipped source |
 | `PostToolUse: Edit\|Write` | domain-guard note | e.g. "verify the config-check guard on this data-layer file" |
 | `PostToolUse: Edit\|Write` (`prompt` type) | i18n / parity check | LLM judgment check, cheap model, scoped `if` matcher |
-| `PreModelSwitch` (optional) | cost guard | If Step 1's guided cost answer was "keep cost low," block a switch to a pricier model the session didn't explicitly ask for — ties the cost-priority choice to an actual enforcement point, not just an agent-file default |
+| `PreModelSwitch` (optional) | cost guard | If Step 1's guided cost answer was "keep cost low," block a switch to a pricier model the session didn't explicitly ask for — ties the cost-priority choice to an actual enforcement point, not just an agent-file default. Payload carries `to_model`/`from_model` (not `model`, which is `SessionStart`-only) — check `to_model` for the target, and return `permissionDecision: "deny"` to block, `"allow"` to permit |
 | `Stop` | build/type-check gate | Runs the build once per turn-completion, blocks with actionable errors on failure |
 | `Stop` (optional) | memory mirror | For a team that wants learnings synced/shared rather than machine-local — one-way sync of auto memory's project directory + `specs/` to a committed file or external store; see §1.1's memory note for why this is opt-in, not default |
 
@@ -200,17 +200,32 @@ large monorepo migration, a recurring wide audit), not as boilerplate every proj
 | Role | Always build | Model tier |
 | --- | --- | --- |
 | Orchestrator | `project-manager` (routes multi-step work), `planner` (file-precise plan before coding) | Sonnet for both by default — escalate `planner` to Opus only under the complexity/cost-priority rule above |
-| Implementer | `<domain>-engineer` — one per major layer the project actually has (e.g. `frontend-engineer`, `backend-engineer`, `cli-engineer`) | Sonnet |
-| Correctness reviewer | one reviewer for the primary language's own failure modes (type errors, unhandled `Result`/`Option`, panics, etc. — whatever "compiles but wrong" looks like in this ecosystem) | Haiku if mechanically checkable (e.g. `tsc --noEmit`, `mypy`), else Sonnet |
+| Implementer | `<domain>-engineer` — one per major layer the project actually has (e.g. `frontend-engineer`, `backend-engineer`, `cli-engineer`). For one product built across two toolchains that compile into a single artifact rather than separate deployable services (a Tauri/Electron app's web-frontend + native-backend halves, a WASM component plus its JS host) — one implementer covering both is usually right; split only once one half's context is routinely crowded out by the other, the same trigger §1.4 already uses for splitting any agent | Sonnet |
+| Correctness reviewer | one reviewer for the primary language's own failure modes (type errors, unhandled `Result`/`Option`, panics, etc. — whatever "compiles but wrong" looks like in this ecosystem). For the two-toolchain-one-product case above, one reviewer covering both is the same default as the implementer row — it just needs to actually shell out to *both* toolchains' checks, not silently cover only one | Haiku if mechanically checkable (e.g. `tsc --noEmit`, `mypy`), else Sonnet |
 | `refactor-cleaner` | evidence-based dead-code sweep using the ecosystem's own tool (`knip`/`ts-prune`/`depcheck` for JS, `vulture` for Python, `go vet`/`deadcode` for Go...) | Sonnet |
 | `test-writer` | tests in the project's real test framework | Sonnet |
 | `silent-failure-hunter` | swallowed errors vs. intentional best-effort catches | Sonnet |
+
+**This table alone is already 6-7 roles before any trait-conditional agent — reconcile
+that explicitly against `BOOTSTRAP.md`'s "essentials" tier (3-4 agents) instead of leaving
+a silent conflict.** Under essentials, keep exactly: one implementer, one correctness
+reviewer, `planner` *or* `project-manager` (not both — pick whichever the request needs:
+`planner` for a build starting from a real plan, `project-manager` for one that's mostly
+"just start building"), plus **any trait-conditional reviewer justified by real stakes**
+(a `security-reviewer`-equivalent for auth/secrets/money/deletion/an analogous trust
+boundary — see the trait table below). That last part is not optional padding: deferring
+`refactor-cleaner`, `silent-failure-hunter`, `ux-designer`, and ordinary trait reviewers
+(i18n, performance) under essentials is genuine, reasonable sequencing — deferring a
+stakes-justified reviewer isn't sequencing, it's just building something less safe, which
+"essentials" was never meant to trade away. Only once a real high-stakes trait is absent
+does the essentials set shrink to exactly four. State which roles you deferred and why in
+the final report either way.
 
 | Trait detected | Add this reviewer/agent | Model tier |
 | --- | --- | --- |
 | Has a UI (web/mobile/desktop/TUI) | `<framework>-reviewer` (React/Vue/SwiftUI/etc. correctness: state, lifecycle, list keys, effect cleanup) + `ux-designer` for new screens | Sonnet |
 | Has persistence (DB, external state store) | `<data-layer>-guard` — missing config guards, unguarded queries, migration safety | Sonnet |
-| Has auth, secrets, or direct user input | `security-reviewer` | Opus |
+| Has auth, secrets, direct user input, **or any other trust boundary between untrusted and privileged code** — a desktop app's webview-to-native IPC/capability boundary (Tauri/Electron), a browser extension's content-script-to-background boundary, a plugin sandbox — not just the web-shaped case the name suggests | `security-reviewer` | Opus |
 | Perf-sensitive (heavy compute, large data, real-time, mobile battery) | `performance-reviewer` | Sonnet |
 | Multi-language / i18n | `i18n-checker` — translation-key parity, hardcoded strings | Haiku |
 | Has an HTTP/RPC/CLI-flag surface others depend on | `api-contract-reviewer` — breaking changes, error shapes, status/exit codes | Sonnet |
@@ -313,6 +328,17 @@ that ran `git diff --cached` before the repo had a first commit — no error tex
 git repository," just git falling back to `--no-index` mode and dumping its full ~130-line
 usage text to stderr on every verification run.
 
+**A `Stop`/build-gate hook (or any hook shelling out to the project's own toolchain) must
+tell "the tool isn't installed" apart from "the check failed" — only the second one blocks.**
+Check for the toolchain first (`which`/`command -v`, or just try the command and inspect
+the failure) and fail open with a plain warning when it's simply missing, the same way the
+gate already fails open when there's no `tsconfig.json`/`Cargo.toml` yet. This isn't an edge
+case worth hand-waving: it's the normal state of a fresh machine trying an ecosystem for the
+first time (a web developer's first Tauri project has npm but not yet `cargo`; a CI
+container might have one language's toolchain baked in and not another) and it has already
+caused real gates to be written twice without this distinction being stated as a rule
+anywhere. State it as a rule once, here, instead of leaving each hook to reinvent it.
+
 ### 1.9 Release / deploy health check
 
 Only build this if Step 1's "Deploy target, if any" wasn't "not yet." "Shipping" means one
@@ -320,7 +346,7 @@ of **four** different things depending on the profile — pick (or combine) acco
 and don't assume the live-service flavor by default:
 
 - **Live service** (a web app/backend on Vercel, Fly, Render, etc.): after any push the user reports, or when asked to check prod, confirm the latest deployment reached its "ready" state, not error or stuck building. On failure, pull the build logs and report the actual failing lines. On success, check a short window of runtime logs as a smoke test — a clean build can still throw at runtime (env var, DB, API key).
-- **Published artifact** (a CLI binary or library/package): after a release is tagged or published, confirm the release pipeline actually finished — e.g. a `goreleaser`/GitHub Actions run produced binaries for every target platform, or `cargo publish`/`npm publish`/`twine upload` completed and the new version is live on the registry. A release command not erroring *locally* is not proof — a CI matrix failure (one platform's cross-compile broke) is this flavor's equivalent of a runtime error a local build wouldn't catch. For a **library specifically**, go one step further: the publish succeeding doesn't mean it *works for a consumer* — install the just-published (or just-built) package into a clean environment and run a real smoke import/usage, not just your own dev-environment test suite. This catches the class of bug that only exists at the packaging boundary: a missing `py.typed` marker (PEP 561) making a fully-typed Python library look untyped to consumers, a packaging manifest that forgot to include a non-`.py` asset, or a dependency that's only present because it leaked in from your dev environment and was never actually declared.
+- **Published artifact** (a CLI binary, library/package, or a desktop app's installers — Tauri/Electron code-signed builds distributed via GitHub Releases or an auto-updater feed are this flavor too, not a missing fifth category, even though there's no registry `publish` command): after a release is tagged or published, confirm the release pipeline actually finished — e.g. a `goreleaser`/GitHub Actions/`tauri-action` run produced binaries (or signed installers) for every target platform, or `cargo publish`/`npm publish`/`twine upload` completed and the new version is live on the registry. A release command not erroring *locally* is not proof — a CI matrix failure (one platform's cross-compile broke) is this flavor's equivalent of a runtime error a local build wouldn't catch. For a **library specifically**, go one step further: the publish succeeding doesn't mean it *works for a consumer* — install the just-published (or just-built) package into a clean environment and run a real smoke import/usage, not just your own dev-environment test suite. This catches the class of bug that only exists at the packaging boundary: a missing `py.typed` marker (PEP 561) making a fully-typed Python library look untyped to consumers, a packaging manifest that forgot to include a non-`.py` asset, or a dependency that's only present because it leaked in from your dev environment and was never actually declared.
 - **Marketplace/store submission** (an app on the App Store or Play Store, a browser extension on the Chrome Web Store, a plugin on a marketplace like VS Code's or Figma's): this flavor is qualitatively different from the other three — a technically successful upload can still be **rejected** by platform review for policy reasons, and review can take hours to days, so "it uploaded" is not "it shipped." Confirm the build/bundle uploaded successfully, then track actual review status (pending/approved/rejected) rather than assuming success — if rejected, surface the platform's actual rejection reason, don't guess at it.
 - **Scheduled job / pipeline** (a cron job, an Airflow/Dagster DAG, any batch process nobody is watching in real time): the core risk here isn't "did the build fail" — it's **silent success-shaped failure**. The job can be correctly registered and still not have actually run at its last scheduled time, or it can run and complete with exit code 0 while producing garbage (an empty upstream file silently propagating into zero-row output, a schema change silently coercing types instead of erroring). Confirm the job's last real run timestamp, not just that it's registered, and sanity-check output shape/size against what's expected — don't treat "no error" as "it worked."
 
