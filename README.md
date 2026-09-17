@@ -62,6 +62,35 @@ description.
 - An Operator's Manual — a published, project-specific HTML reference for how to drive
   the harness day to day.
 
+## Grounded in Anthropic's own documentation, not guesswork
+
+Every mechanic this generates is built on how Claude Code actually works and what
+Anthropic's own published guidance for it recommends — checked against the current docs
+directly, not assumed from memory:
+
+- **`CLAUDE.md` discipline** — the under-200-line target, "include what Claude can't
+  guess, exclude what it can derive," path-scoped rules for detail that only sometimes
+  applies — straight from Anthropic's own memory and best-practices guidance.
+- **Hooks for certainty, judgment calls for everything else** — deterministic checks as
+  `command` hooks; anything needing real judgment as `prompt`/`agent` hooks; every guard
+  fails open on its own internal error — matching Claude Code's actual hook contract, not
+  a home-grown assumption about it.
+- **Subagents with real context isolation and an explicit tool allowlist** — reviewers
+  stay read-only, each call starts with a genuinely fresh context, per how Claude Code's
+  subagent contract actually works.
+- **Native auto memory, not a reinvented one** — Claude Code ships its own cross-session
+  memory now, so the harness relies on that instead of building a redundant custom system;
+  a call made specifically because of what the current docs say it already does.
+- **Cost-aware model tiers** — cheapest tier that reliably does the job by default, Opus
+  reserved for genuinely high-stakes cases, following Claude Code's own model-routing
+  behavior rather than an arbitrary convention.
+
+This isn't a one-time read. The two spec files below get re-checked against the current
+docs periodically and updated when something's changed or turned out to be wrong — this
+project has caught and discarded an outright wrong claim about Claude Code's model lineup
+this way before it ever made it into a generated harness, rather than just trusting the
+first plausible-sounding answer.
+
 ## How it works, and how to change it
 
 The actual logic lives in `plugin/skills/init/`:
