@@ -13,3 +13,6 @@ node_modules/
 # Claude Code local/session state — never commit personal or session-specific config
 .claude/settings.local.json
 .claude/session-data/
+
+# Eval run output — regenerated per run, not source
+plugin/evals/results/
