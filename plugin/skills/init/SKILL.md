@@ -1,5 +1,5 @@
 ---
-description: Bootstraps a complete, project-specific Claude Code harness — a lean CLAUDE.md plus the full .claude/ tree (hooks, agents, commands, skills) — from a one-paragraph description of a project idea, for any stack (web, CLI, backend, mobile, library, data/ML, etc). Use when the user describes a new project and wants Claude Code set up for it, asks for a harness/starter kit/project scaffold to be built, or explicitly invokes this skill.
+description: Bootstraps a complete, project-specific Claude Code harness — a lean CLAUDE.md plus the full .claude/ tree (hooks, agents, commands, skills) — from a one-paragraph description of a project idea, for any stack (web, CLI, backend, mobile, library, data/ML, etc). Use whenever the user substantively describes a new project or app they want to build — even with no mention of Claude Code, a harness, or setup at all, e.g. "I want to build a command-line tool that..." or "We're building a web app with..." — not only when they explicitly ask for Claude Code to be set up. Also use when they explicitly ask for a harness/starter kit/project scaffold, or explicitly invoke this skill. A one- or two-word description with no real substance ("I want to build an app") doesn't have enough to profile yet — ask what kind of project it is first rather than invoking this.
 ---
 
 # Bootstrap a project harness
