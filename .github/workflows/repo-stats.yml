@@ -24,3 +24,4 @@ jobs:
           repository: sagaga144/claude-harness-bootstrap
           ghtoken: ${{ secrets.GHRS_GITHUB_API_TOKEN }}
           databranch: github-repo-stats
+          ghpagesprefix: https://sagaga144.github.io/claude-harness-bootstrap
