@@ -1,0 +1,26 @@
+name: repo-stats
+
+# Overcomes GitHub's 14-day traffic-data limit: runs daily, pulls the
+# traffic API, and commits the history to the `github-repo-stats` branch
+# via jgehrcke/github-repo-stats (https://github.com/jgehrcke/github-repo-stats).
+#
+# Requires a repo secret named GHRS_GITHUB_API_TOKEN (a classic PAT with
+# the `repo` scope). Until that secret exists, this workflow will fail —
+# that's expected, not a bug.
+
+on:
+  schedule:
+    - cron: "0 23 * * *"
+  workflow_dispatch:
+
+jobs:
+  repostats:
+    name: repostats
+    runs-on: ubuntu-latest
+    steps:
+      - name: run-ghrs
+        uses: jgehrcke/github-repo-stats@v1.4.2
+        with:
+          repository: sagaga144/claude-harness-bootstrap
+          ghtoken: ${{ secrets.GHRS_GITHUB_API_TOKEN }}
+          databranch: github-repo-stats
