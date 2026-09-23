@@ -6,3 +6,5 @@
 
 **Latest report PDF**: [report.pdf](https://github.com/sagaga144/claude-harness-bootstrap/raw/github-repo-stats/sagaga144/claude-harness-bootstrap/latest-report/report.pdf)
 
+
+**Latest report HTML via GitHub pages**: [report.html](https://sagaga144.github.io/claude-harness-bootstrap/sagaga144/claude-harness-bootstrap/latest-report/report.html)
