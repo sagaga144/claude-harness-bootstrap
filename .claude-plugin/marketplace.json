@@ -4,12 +4,15 @@
     "name": "sagaga144",
     "url": "https://github.com/sagaga144"
   },
+  "metadata": {
+    "description": "Generate a project-specific Claude Code harness from a one-paragraph project description."
+  },
   "plugins": [
     {
       "name": "harness-bootstrap",
       "source": "./plugin",
-      "description": "Bootstraps a complete, project-specific Claude Code harness (CLAUDE.md, hooks, agents, commands, skills) from a one-paragraph description of a project idea — for any stack, not just web apps.",
-      "version": "0.5.9",
+      "description": "Describe your project in one paragraph. Get a complete, project-specific Claude Code setup: CLAUDE.md, guard hooks, reviewer agents and slash commands.",
+      "version": "0.6.0",
       "author": {
         "name": "sagaga144"
       }
