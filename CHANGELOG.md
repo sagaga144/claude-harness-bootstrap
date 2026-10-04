@@ -12,13 +12,16 @@ No change to what the plugin generates. This release is about showing it.
 - **Community files**: `CONTRIBUTING.md` (local testing, running the evals, the most
   wanted contributions), `SECURITY.md`, and issue forms for bugs and new project shapes.
 - Shorter plugin description in the marketplace listing.
+- Re-ran the full eval suite on Claude Code 2.1.289: 7 of 8 pass. `vague-description` now
+  fails: given only "I want to build an app", the skill flags its assumption but assumes a
+  very specific stack. The eval command now needs `--allow-tools Write Edit`.
 
 ## 0.5.9 (2026-09-20)
 
 - A plain project description is now enough to start the setup. Before this, the skill
   only triggered if you also asked to "set up Claude Code"; the eval suite caught it.
 - New eval case, `self-triggers-on-bare-description`, to keep that from regressing.
-- All 8 eval cases pass with the plugin loaded.
+- All 8 eval cases passed with the plugin loaded (on Claude Code 2.1.278).
 
 ## 0.5.8 (2026-09-19)
 
