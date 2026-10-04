@@ -308,8 +308,11 @@ rule file that `CLAUDE.md` (and `settings.json`) mentions, and confirm each one 
 disk. If any write was blocked or denied (writes into `.claude/` need permission, and the
 user may refuse it), edit `CLAUDE.md` so it lists only what was actually written; never
 leave it describing files that don't exist. The closing message then names what is
-missing and why (e.g. "the hooks weren't written because the write into `.claude/` was
-denied; re-run `/harness-bootstrap:init` and allow it to finish").
+missing and why: list each planned agent, hook and command that wasn't written, by name
+and with its one-line purpose, and say why (e.g. "not written because the write into
+`.claude/` was denied; re-run `/harness-bootstrap:init` and allow it to finish"). Do this
+even if writing stopped early: name the full set the profile called for, not only the
+files you got as far as attempting.
 
 Report back to the user in plain language what got built and why — the stack you
 detected, the agents/hooks you chose and the trait that justified each one, the model
