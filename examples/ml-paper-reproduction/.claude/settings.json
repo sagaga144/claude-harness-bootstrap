@@ -1,0 +1,39 @@
+{
+  "model": "sonnet",
+  "permissions": {
+    "deny": [
+      "Read(.env)", "Read(**/.env)", "Read(~/.ssh/**)", "Read(~/.aws/**)",
+      "Bash(ssh:*)", "Bash(scp:*)", "Bash(curl:*)", "Bash(wget:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "node .claude/hooks/critical-rules.cjs" }] }
+    ],
+    "PreToolUse": [
+      { "matcher": "Bash", "hooks": [
+        { "type": "command", "command": "node .claude/hooks/guard-bash-push.cjs" },
+        { "type": "command", "command": "node .claude/hooks/guard-bash-secrets.cjs" }
+      ] },
+      { "matcher": "Edit|Write", "hooks": [
+        { "type": "command", "command": "node .claude/hooks/guard-protected-files.cjs" }
+      ] },
+      { "matcher": "Write", "hooks": [
+        { "type": "command", "command": "node .claude/hooks/guard-adhoc-docs.cjs" }
+      ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Edit|Write", "hooks": [
+        { "type": "command", "command": "node .claude/hooks/warn-debug-statements.cjs" },
+        { "type": "command", "command": "node .claude/hooks/note-data-integrity.cjs" }
+      ] }
+    ],
+    "PreModelSwitch": [
+      { "hooks": [{ "type": "command", "command": "node .claude/hooks/guard-model-switch.cjs" }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "node .claude/hooks/stop-syntax-gate.cjs", "timeout": 60000 }] }
+    ]
+  },
+  "mcpServers": {}
+}
