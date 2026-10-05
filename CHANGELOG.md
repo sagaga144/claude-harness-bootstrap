@@ -1,8 +1,9 @@
 # Changelog
 
-## 0.6.0 (2026-10-04)
+## 0.6.0 (2026-10-05)
 
-No change to what the plugin generates. This release is about showing it.
+Mostly about showing what the plugin generates, plus one behavior fix found while
+re-running the evals.
 
 - **Real example outputs** in [`examples/`](examples/): seven complete harnesses from the
   v0.5.x test rounds (SaaS monorepo, Terraform on AWS, game server, Solidity, JUCE audio
@@ -12,9 +13,25 @@ No change to what the plugin generates. This release is about showing it.
 - **Community files**: `CONTRIBUTING.md` (local testing, running the evals, the most
   wanted contributions), `SECURITY.md`, and issue forms for bugs and new project shapes.
 - Shorter plugin description in the marketplace listing.
-- Re-ran the full eval suite on Claude Code 2.1.289: 7 of 8 pass. `vague-description` now
-  fails: given only "I want to build an app", the skill flags its assumption but assumes a
-  very specific stack. The eval command now needs `--allow-tools Write Edit`.
+
+**Fixes**
+
+- A description that names no app type ("I want to build an app") no longer gets a
+  made-up stack. The skill asks one question, "what kind of app is this?". With no answer
+  possible, it builds a stack-neutral minimal harness: push guard and secret scan only.
+- `CLAUDE.md` never describes files that don't exist. If writes into `.claude/` are
+  denied (you can refuse that permission prompt), `CLAUDE.md` lists only what was
+  written, and the closing message names each planned file that's missing and why.
+
+**Evals**
+
+- The command now needs `--allow-tools Write Edit`. Eval runs still can't write into
+  `.claude/`, so new graders check that those writes were attempted, and that `CLAUDE.md`
+  doesn't describe files that were never written.
+- Latest result on Claude Code 2.1.289: 6 of 8 pass. `web-app-auth-db` fails (no
+  dedicated persistence agent under "essentials only"). `vague-description` fails
+  sometimes (3 of 5 runs passed): Claude Code can announce a guessed stack before the
+  plugin loads.
 
 ## 0.5.9 (2026-09-20)
 

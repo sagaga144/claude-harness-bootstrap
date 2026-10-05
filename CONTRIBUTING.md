@@ -38,14 +38,15 @@ claude plugin eval ./plugin --scaffold --allow-tools Write Edit
 That runs every case with the plugin loaded, plus a no-plugin baseline for comparison.
 Useful flags:
 
-- `--case <name>` runs one case, e.g. `--case web-app-auth-db`.
+- `--case <name>` runs one case, e.g. `--case web-app-auth-db`. Only one `--case` is
+  used per command, so run cases one at a time.
 - `--runs 3` repeats each case for a steadier score (the cases default to one run).
 - `--max-cost-usd <n>` sets a hard spending ceiling.
 - `--scaffold` is needed for `retrofit-existing-repo`, which builds a fixture repo with
   `fixture.sh`.
 - `--allow-tools Write Edit` lets a run write `CLAUDE.md`. Without it, every grader that
   reads `CLAUDE.md` fails. Writes into `.claude/` stay blocked in eval runs either way, so
-  no case grades that tree.
+  graders check only that those writes were attempted, not the files themselves.
 
 Each run is a full Claude Code session on your own account, so a full suite costs real
 usage. Results go to `plugin/evals/results/` (gitignored).
