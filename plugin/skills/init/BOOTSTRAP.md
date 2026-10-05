@@ -149,7 +149,10 @@ guessing:
 - generic guard hooks only: the push guard and the secret scan;
 - `CLAUDE.md` states the single assumption plainly ("the project type wasn't given, so
   this harness is stack-neutral") and says to re-run `/harness-bootstrap:init` with a
-  description once the stack is chosen.
+  description once the stack is chosen;
+- don't invent a project name or anything else to fill gaps; leave it unnamed;
+- the closing message still asks the question, with its options and the recommended one,
+  so the user can answer it on the re-run.
 
 ---
 
