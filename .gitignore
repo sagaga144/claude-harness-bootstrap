@@ -16,3 +16,6 @@ node_modules/
 
 # Eval run output — regenerated per run, not source
 plugin/evals/results/
+
+# Per-commit eval results from scripts/run-evals.mjs
+evals-run/
