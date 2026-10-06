@@ -1,8 +1,8 @@
 # Changelog
 
-## 0.6.0 (2026-10-05)
+## 0.6.0 (2026-10-06)
 
-Mostly about showing what the plugin generates, plus one behavior fix found while
+Mostly about showing what the plugin generates, plus behavior fixes found while
 re-running the evals.
 
 - **Real example outputs** in [`examples/`](examples/): seven complete harnesses from the
@@ -22,16 +22,18 @@ re-running the evals.
 - `CLAUDE.md` never describes files that don't exist. If writes into `.claude/` are
   denied (you can refuse that permission prompt), `CLAUDE.md` lists only what was
   written, and the closing message names each planned file that's missing and why.
+- An authenticated app that stores users' own data now keeps its data-layer guard under
+  "essentials only", alongside the security reviewer.
 
 **Evals**
 
 - The command now needs `--allow-tools Write Edit`. Eval runs still can't write into
   `.claude/`, so new graders check that those writes were attempted, and that `CLAUDE.md`
   doesn't describe files that were never written.
-- Latest result on Claude Code 2.1.289: 6 of 8 pass. `web-app-auth-db` fails (no
-  dedicated persistence agent under "essentials only"). `vague-description` fails
-  sometimes (3 of 5 runs passed): Claude Code can announce a guessed stack before the
-  plugin loads.
+- New `scripts/run-evals.mjs` runs the suite one case at a time and retries only a case
+  cut off by a usage limit, so a full run can finish on a subscription.
+- Result on Claude Code 2.1.291: all 8 cases pass. The plugin changed the outcome versus
+  plain Claude Code in 4 of them.
 
 ## 0.5.9 (2026-09-20)
 

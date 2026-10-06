@@ -51,6 +51,18 @@ Useful flags:
 Each run is a full Claude Code session on your own account, so a full suite costs real
 usage. Results go to `plugin/evals/results/` (gitignored).
 
+On a subscription, a full suite can run into your usage limit partway through. The
+per-case runner avoids starting over:
+
+```bash
+node scripts/run-evals.mjs               # every case, with and without the plugin
+node scripts/run-evals.mjs --only-with   # skip the baseline while iterating (about half the usage)
+```
+
+It runs each case as its own command, waits and retries only a case that was cut off by a
+usage limit or a dropped connection, and skips cases already recorded for the current
+commit. The merged table is written to `evals-run/<commit>/SUMMARY.md`.
+
 If you change trigger wording in `SKILL.md`, re-run at least
 `self-triggers-on-bare-description`. It exists because the skill once failed to trigger
 on a plain project description.

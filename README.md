@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/sagaga144/claude-harness-bootstrap)](https://github.com/sagaga144/claude-harness-bootstrap/releases)
-[![evals: 6/8 passing](https://img.shields.io/badge/evals-6%2F8%20passing-yellow.svg)](#tested-not-just-prompted)
+[![evals: 8/8 passing](https://img.shields.io/badge/evals-8%2F8%20passing-brightgreen.svg)](#tested-not-just-prompted)
 [![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-d97757.svg)](https://claude.com/claude-code)
 
 Describe your project in one paragraph. Get a complete, project-specific Claude Code
@@ -87,33 +87,26 @@ The plugin ships with an eval suite in [`plugin/evals/`](plugin/evals/). Each ca
 real Claude Code session that gets a project description, with graders that check what
 came out. Each case also runs once without the plugin, for comparison.
 
-**Latest result (v0.6.0, Claude Code 2.1.289, 2026-10-05): 6 of 8 pass.** 8 cases. In 3 of
-them the plugin changes the outcome versus plain Claude Code; the rest are regression
-guards. Eval runs can't write into `.claude/`, so the generated agents and hooks are
-shown in [`examples/`](examples/) rather than graded.
+**Latest result (v0.6.0, Claude Code 2.1.291, 2026-10-06): 8 of 8 pass.** 8 cases. In 4 of
+them the plugin changed the outcome versus plain Claude Code in this run; the rest are
+regression guards. Eval runs can't write into `.claude/`, so the generated agents and hooks
+are shown in [`examples/`](examples/) rather than graded.
 
 | Case | What it checks | Result | Plugin vs. plain Claude Code |
 |---|---|---|---|
 | `self-triggers-on-bare-description` | A plain project description, with no mention of Claude Code or setup, is enough to start it. | pass | changes the outcome |
 | `two-guided-questions` | The two setup questions (cost, scope) actually get asked. | pass | changes the outcome |
-| `cli-no-ui-no-persistence` | A local-files CLI gets no UI reviewer or persistence guard, dev commands match its toolchain, `CLAUDE.md` stays lean, and it tries to build the `.claude/` tree. | pass | changes the outcome (plain Claude Code doesn't try to build `.claude/`) |
-| `published-library-semver` | A library published to PyPI gets a semver / breaking-change reviewer. | pass | same |
+| `web-app-auth-db` | An authenticated web app with a database plans a security reviewer and a data-layer guard, a secret scan, and no semver reviewer. | pass | changes the outcome |
+| `published-library-semver` | A library published to PyPI gets a semver / breaking-change reviewer and a lean, placeholder-free `CLAUDE.md`. | pass | changes the outcome |
+| `vague-description` | "I want to build an app" gets one question and a stack-neutral harness, not a guessed stack, and `CLAUDE.md` never describes files that weren't written. | pass | same |
+| `cli-no-ui-no-persistence` | A local-files CLI gets no UI reviewer or persistence guard, dev commands match its toolchain, and `CLAUDE.md` stays lean. | pass | same |
 | `retrofit-existing-repo` | On a repo with a harness already in place, it keeps the existing agent and `CLAUDE.md` and follows the repo's own conventions. | pass | same |
 | `cost-low-caps-models` | Asking to keep cost low means no agent runs on Opus. | pass | same |
-| `web-app-auth-db` | An authenticated web app with a database gets a security reviewer and a dedicated persistence guard, a secret scan, and no semver reviewer. | **fail** | same (both fail) |
-| `vague-description` | "I want to build an app" gets one flagged assumption or one question, not a pile of confident guesses, and `CLAUDE.md` never describes files that weren't written. | **fail** (passed 3 of 5 runs) | same (both fail) |
 
-Why the two fail:
-
-- **`web-app-auth-db`**: with "essentials only" chosen, it plans a security reviewer but
-  covers the database with a hook instead of a dedicated persistence agent, which this
-  case requires.
-- **`vague-description`**: the plugin now builds a stack-neutral harness when no app type
-  is given. But before the plugin loads, Claude Code itself sometimes announces a guessed
-  stack, and the judge counts that against it.
-
-Six cases come from one full run. A usage limit cut off the last two, so those were run
-again on their own, on the same code.
+Each case was run as its own command on the same commit, using
+[`scripts/run-evals.mjs`](scripts/run-evals.mjs), so a usage limit can't cut a run short.
+The baseline varies between runs: across recent runs, plain Claude Code sometimes
+passes `cli-no-ui-no-persistence` and `published-library-semver` and sometimes doesn't.
 
 Run them from the repo root:
 
@@ -123,7 +116,8 @@ claude plugin eval ./plugin --scaffold --allow-tools Write Edit
 
 `--scaffold` lets `retrofit-existing-repo` build its fixture repo, and
 `--allow-tools Write Edit` lets runs write the `CLAUDE.md` the graders check. Each case is
-a full session on your own account; use `--case <name>` to run one. More in
+a full session on your own account. On a subscription, `node scripts/run-evals.mjs` runs
+the cases one by one and retries any that hit a usage limit. More in
 [CONTRIBUTING.md](CONTRIBUTING.md#run-the-evals).
 
 **What it caught.** The README always said you could just describe a project. The first
