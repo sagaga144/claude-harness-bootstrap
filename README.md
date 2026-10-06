@@ -184,6 +184,27 @@ The logic lives in [`plugin/skills/init/`](plugin/skills/init/):
 
 Edit those files to change what gets built.
 
+## What it runs and sends
+
+The plugin itself is instructions: three Markdown files in `plugin/skills/init/`, a
+manifest, an icon and the eval cases. Installing it or loading the skill runs no hooks,
+MCP servers, scripts or binaries. It reads no credentials or environment variables and
+makes no network calls of its own.
+
+When you use it, Claude writes `CLAUDE.md` and `.claude/` into **your project** with
+Claude Code's normal file tools, under your usual permission prompts. What lands there is
+yours to read before you keep it:
+
+- **Hooks** are small Node scripts that run locally (push guard, secret scan, build gate).
+  None of them contact a server.
+- **`settings.json`** denies reading `.env`, `~/.ssh` and `~/.aws` and blocks `curl`,
+  `wget` and `ssh`, so the session stays away from your secrets.
+- **MCP servers:** if your project already has a deploy or release target, the harness may
+  suggest wiring a matching MCP server (for example `github`). You configure it and its
+  credentials yourself; the plugin doesn't ship or start one.
+- **Env-var overrides** such as `ALLOW_PUSH=1` only switch a local guard off for one
+  command.
+
 ## Contributing
 
 Runs on project shapes it hasn't seen yet are the most useful contribution (embedded /

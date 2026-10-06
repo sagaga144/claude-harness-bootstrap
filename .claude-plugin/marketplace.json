@@ -12,7 +12,7 @@
       "name": "harness-bootstrap",
       "source": "./plugin",
       "description": "Describe your project in one paragraph. Get a complete, project-specific Claude Code setup: CLAUDE.md, guard hooks, reviewer agents and slash commands.",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "author": {
         "name": "sagaga144"
       }

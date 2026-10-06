@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.1 (2026-10-06)
+
+No change to what the plugin generates.
+
+- Added a plugin icon.
+- New README section, "What it runs and sends": the plugin is instructions only, with no
+  MCP server, credential reading or network calls of its own, and what the generated
+  harness does in your project.
+
 ## 0.6.0 (2026-10-06)
 
 Mostly about showing what the plugin generates, plus behavior fixes found while
