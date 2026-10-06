@@ -8,7 +8,7 @@
 Describe your project in one paragraph. Get a complete, project-specific Claude Code
 setup: `CLAUDE.md`, guard hooks, reviewer agents and slash commands.
 
-<!-- demo.gif goes here -->
+![Demo: one paragraph in, two setup questions, a complete .claude/ harness out](docs/demo.gif)
 
 ## Quickstart
 
