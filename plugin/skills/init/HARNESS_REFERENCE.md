@@ -243,14 +243,18 @@ reviewer, `planner` *or* `project-manager` (not both — pick whichever the requ
 `planner` for a build starting from a real plan, `project-manager` for one that's mostly
 "just start building"), plus **any trait-conditional reviewer justified by real stakes**
 (a `security-reviewer`-equivalent for auth/secrets/money/deletion/an analogous trust
-boundary — see the trait table below). That last part is not optional padding: deferring
+boundary — see the trait table below — and the `<data-layer>-guard` when the project
+stores users' own records, accounts or payments in a database, because one unscoped
+query or bad migration there leaks or destroys real user data; a hook alone doesn't
+replace it). That last part is not optional padding: deferring
 `refactor-cleaner`, `silent-failure-hunter`, `ux-designer`, and ordinary trait reviewers
 (i18n, performance) under essentials is genuine, reasonable sequencing — deferring a
 stakes-justified reviewer isn't sequencing, it's just building something less safe, which
 "essentials" was never meant to trade away. Counting it out: implementer(s) + correctness
 reviewer + one orchestrator is **three** roles at minimum (more only if the project
-genuinely has multiple separate implementer layers, per above) — a real high-stakes trait
-adds a fourth; its *absence* is what keeps the count at three, not four. State which roles
+genuinely has multiple separate implementer layers, per above) — each real high-stakes
+trait adds one (an authenticated app with a user-data database gets both the security
+reviewer and the data-layer guard); their *absence* is what keeps the count at three. State which roles
 you deferred and why in
 the final report either way.
 

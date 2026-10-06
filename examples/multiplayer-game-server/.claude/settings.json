@@ -1,0 +1,51 @@
+{
+  "model": "sonnet",
+  "permissions": {
+    "deny": [
+      "Read(.env)", "Read(**/.env)", "Read(~/.ssh/**)", "Read(~/.aws/**)",
+      "Bash(ssh:*)", "Bash(scp:*)", "Bash(curl:*)", "Bash(wget:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "node .claude/hooks/critical-rules.cjs" }] }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node .claude/hooks/guard-bash-push.cjs" },
+          { "type": "command", "command": "node .claude/hooks/guard-secret-scan.cjs" }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          { "type": "command", "command": "node .claude/hooks/guard-adhoc-doc.cjs" }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "node .claude/hooks/guard-protected-file.cjs" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "node .claude/hooks/warn-console-log.cjs" },
+          { "type": "command", "command": "node .claude/hooks/note-state-integrity.cjs" }
+        ]
+      }
+    ],
+    "PreModelSwitch": [
+      { "hooks": [{ "type": "command", "command": "node .claude/hooks/cost-guard-model-switch.cjs" }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "node .claude/hooks/build-gate.cjs", "timeout": 60000 }] }
+    ]
+  },
+  "mcpServers": {}
+}

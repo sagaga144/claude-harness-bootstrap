@@ -1,0 +1,38 @@
+name: New project shape
+description: You ran the plugin on a kind of project and want to report how it went.
+title: "[shape] "
+labels: ["project-shape"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks. Runs on new kinds of projects are the most useful thing you can send.
+        Please remove anything private (paths, names, keys) before pasting.
+  - type: textarea
+    id: description
+    attributes:
+      label: Project description
+      description: The paragraph you gave it, plus your answers to the two setup questions.
+    validations:
+      required: true
+  - type: textarea
+    id: generated
+    attributes:
+      label: What got generated
+      description: The agents, hooks and commands it built. Paste the output of `tree .claude` or list them.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: wrong
+    attributes:
+      label: What was wrong or missing
+      description: Agents or hooks it should have built, ones that don't fit, wrong dev commands, and so on.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Plugin version
+      description: From `/plugin`, or the version in plugin.json.
+      placeholder: "0.6.0"

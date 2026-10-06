@@ -1,128 +1,197 @@
 # Claude Harness Bootstrap
 
-Describe your project in one paragraph. Get back a complete, project-specific
-[Claude Code](https://claude.com/claude-code) harness — a lean `CLAUDE.md`, guard hooks, a
-reviewer/implementer agent roster, and slash commands — tailored to whatever your project
-actually *is* (web app, CLI tool, backend service, library, mobile app, infra-as-code, a
-smart contract, a real-time/audio project, a data or ML pipeline...), not a one-size-fits-
-all web template with brackets to fill in. No Claude Code experience required — you don't
-need to know what a hook or a subagent is for this to work: setup opens with two short,
-plain-language questions (how much to spend, how much to build right now), each with a
-recommended answer already picked, and closes by telling you exactly what to try first.
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/sagaga144/claude-harness-bootstrap)](https://github.com/sagaga144/claude-harness-bootstrap/releases)
+[![evals: 8/8 passing](https://img.shields.io/badge/evals-8%2F8%20passing-brightgreen.svg)](#tested-not-just-prompted)
+[![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-d97757.svg)](https://claude.com/claude-code)
 
-## Install
+Describe your project in one paragraph. Get a complete, project-specific Claude Code
+setup: `CLAUDE.md`, guard hooks, reviewer agents and slash commands.
+
+<!-- demo.gif goes here -->
+
+## Quickstart
+
+In Claude Code:
 
 ```
 /plugin marketplace add sagaga144/claude-harness-bootstrap
 /plugin install harness-bootstrap@harness-bootstrap
 ```
 
-## Use
-
-In any project folder — empty or already has code:
+Then, in any project folder (empty or existing):
 
 ```
 /harness-bootstrap:init
 ```
 
-then describe your project idea. Claude asks two quick questions first — how much to lean
-toward keeping your Claude usage cost down, and whether you want just the essentials
-working first or the full setup right away — each with a recommended default, then
-profiles the project (language, whether it has a UI, persistence, auth or any other trust
-boundary, is a published library, etc.), writes a lean project-specific `CLAUDE.md`, builds
-the rest of `.claude/`, verifies every hook actually works, and — once the harness has run
-for a real session — publishes an "Operator's Manual" artifact documenting exactly what
-got built and how to drive it.
+Describe your project. You'll get two quick questions (how much to keep Claude usage cost
+down, and whether to build just the essentials or the full setup now), each with a
+recommended answer already picked. You don't need to know what a hook or a subagent is.
 
-You usually don't even need the slash command — just describe a new project and ask
-Claude to set it up for Claude Code; the skill can trigger on its own from the
-description.
+You can also skip the slash command and just describe a new project. The skill triggers
+on the description alone.
+
+## See what it generates
+
+Real output, committed as generated. This is the `.claude/` tree for a Rust + React SaaS
+monorepo with real auth and payment data
+([description](examples/monorepo-saas/INPUT.md)):
+
+```
+.claude/
+├── agents/
+│   ├── backend-engineer.md
+│   ├── correctness-reviewer.md     # also checks frontend/backend type drift
+│   ├── frontend-engineer.md
+│   ├── planner.md
+│   └── security-reviewer.md        # auth + payments
+├── commands/
+│   ├── resume-session.md
+│   ├── save-session.md
+│   └── verify.md
+├── hooks/
+│   ├── build-gate.cjs
+│   ├── cost-guard.cjs
+│   ├── critical-rules.cjs
+│   ├── guard-adhoc-doc.cjs
+│   ├── guard-bash-push.cjs
+│   ├── guard-protected-files.cjs
+│   ├── guard-secret-scan.cjs
+│   ├── note-sensitive-surface.cjs
+│   └── warn-debug-print.cjs
+├── rules/
+│   ├── backend-rust.md
+│   ├── contracts.md
+│   └── frontend-react.md
+├── skills/
+│   └── orch-add-feature/SKILL.md
+├── BUGS.md
+└── settings.json
+```
+
+Seven examples, each a different shape:
+[SaaS monorepo](examples/monorepo-saas/) ·
+[Terraform on AWS](examples/terraform-aws-infra/) ·
+[multiplayer game server](examples/multiplayer-game-server/) ·
+[Solidity marketplace](examples/solidity-nft-marketplace/) ·
+[JUCE audio plugin](examples/juce-audio-plugin/) ·
+[ML paper reproduction](examples/ml-paper-reproduction/) ·
+[desktop notes app](examples/desktop-notes-app/).
+[`examples/README.md`](examples/README.md) says what each project's traits changed in its
+harness.
+
+## Tested, not just prompted
+
+The plugin ships with an eval suite in [`plugin/evals/`](plugin/evals/). Each case is a
+real Claude Code session that gets a project description, with graders that check what
+came out. Each case also runs once without the plugin, for comparison.
+
+**Latest result (v0.6.0, Claude Code 2.1.291, 2026-10-06): 8 of 8 pass.** 8 cases. In 4 of
+them the plugin changed the outcome versus plain Claude Code in this run; the rest are
+regression guards. Eval runs can't write into `.claude/`, so the generated agents and hooks
+are shown in [`examples/`](examples/) rather than graded.
+
+| Case | What it checks | Result | Plugin vs. plain Claude Code |
+|---|---|---|---|
+| `self-triggers-on-bare-description` | A plain project description, with no mention of Claude Code or setup, is enough to start it. | pass | changes the outcome |
+| `two-guided-questions` | The two setup questions (cost, scope) actually get asked. | pass | changes the outcome |
+| `web-app-auth-db` | An authenticated web app with a database plans a security reviewer and a data-layer guard, a secret scan, and no semver reviewer. | pass | changes the outcome |
+| `published-library-semver` | A library published to PyPI gets a semver / breaking-change reviewer and a lean, placeholder-free `CLAUDE.md`. | pass | changes the outcome |
+| `vague-description` | "I want to build an app" gets one question and a stack-neutral harness, not a guessed stack, and `CLAUDE.md` never describes files that weren't written. | pass | same |
+| `cli-no-ui-no-persistence` | A local-files CLI gets no UI reviewer or persistence guard, dev commands match its toolchain, and `CLAUDE.md` stays lean. | pass | same |
+| `retrofit-existing-repo` | On a repo with a harness already in place, it keeps the existing agent and `CLAUDE.md` and follows the repo's own conventions. | pass | same |
+| `cost-low-caps-models` | Asking to keep cost low means no agent runs on Opus. | pass | same |
+
+Each case was run as its own command on the same commit, using
+[`scripts/run-evals.mjs`](scripts/run-evals.mjs), so a usage limit can't cut a run short.
+The baseline varies between runs: across recent runs, plain Claude Code sometimes
+passes `cli-no-ui-no-persistence` and `published-library-semver` and sometimes doesn't.
+
+Run them from the repo root:
+
+```bash
+claude plugin eval ./plugin --scaffold --allow-tools Write Edit
+```
+
+`--scaffold` lets `retrofit-existing-repo` build its fixture repo, and
+`--allow-tools Write Edit` lets runs write the `CLAUDE.md` the graders check. Each case is
+a full session on your own account. On a subscription, `node scripts/run-evals.mjs` runs
+the cases one by one and retries any that hit a usage limit. More in
+[CONTRIBUTING.md](CONTRIBUTING.md#run-the-evals).
+
+**What it caught.** The README always said you could just describe a project. The first
+eval run showed that wasn't true: the skill only triggered if you also asked to "set up
+Claude Code". Its trigger condition was narrower than its job. That was fixed in 0.5.9,
+and `self-triggers-on-bare-description` now guards against it coming back.
+
+## Why not a template pack?
+
+A template pack gives you generic pieces to pick from and fill in. This works the other
+way round: it profiles your project's actual traits (language, UI or not, persistence,
+auth or another trust boundary, published or not, how it ships) and derives the harness
+from those. A CLI with no database gets no persistence guard; a published library gets a
+semver reviewer that an app doesn't. It has been run against a web app, a CLI, a
+published library, a desktop app, a game server, Terraform, a monorepo, Solidity, a C++
+audio plugin and an ML research repo.
 
 ## What it builds
 
-- A lean, derived `CLAUDE.md` (under 200 lines) — real content for *this* project, not a
-  template.
-- `.claude/hooks/` — deterministic guards (blocks pushes/deploys/releases without an
-  override, scans commits for secrets, gates on a broken build) plus judgment-call hooks
-  for checks a regex can't make.
-- `.claude/agents/` — picked by the project's actual traits, not a fixed list: a UI gets a
-  framework reviewer, persistence gets a data-layer guard, auth/secrets/any other trust
-  boundary gets a security reviewer, a published library gets a semver/breaking-change
-  reviewer, and so on. Every agent defaults to the cheapest model tier that reliably does
-  the job — Opus is reserved for the rare, genuinely high-stakes case, never handed out by
-  role, and your cost-priority answer from setup caps it further if you asked to keep cost
-  low.
-- `.claude/rules/` — conventions scoped to just the files they apply to (a data layer's
-  query rules, one package's style in a monorepo) instead of bloating `CLAUDE.md` with
-  detail that isn't always relevant.
-- `.claude/commands/` + `.claude/skills/` — `/verify`, orchestrator pipelines. No custom
-  memory system gets built — Claude Code's own built-in auto memory already handles
-  learning across sessions; the harness only adds anything extra for a team that
-  specifically wants learnings synced across machines.
-- An Operator's Manual — a published, project-specific HTML reference for how to drive
-  the harness day to day.
+- **`CLAUDE.md`**, under 200 lines, written for this project.
+- **`.claude/hooks/`**: deterministic guards (blocks pushes, deploys and releases without
+  an override, scans commits for secrets, gates on a broken build) plus judgment-call
+  hooks for checks a regex can't make. Every hook is run once to check it works.
+- **`.claude/agents/`**, picked by the project's traits: a UI gets a framework reviewer,
+  persistence gets a data-layer guard, a trust boundary gets a security reviewer, a
+  published library gets a semver reviewer. Each agent uses the cheapest model tier that
+  reliably does the job; Opus is kept for the rare high-stakes case, and choosing low cost
+  at setup caps it further.
+- **`.claude/rules/`**: conventions scoped to the files they apply to, instead of
+  bloating `CLAUDE.md`.
+- **`.claude/commands/`** and **`.claude/skills/`**: `/verify` and orchestrator
+  pipelines. No custom memory system; Claude Code's built-in auto memory already does
+  that.
+- **An Operator's Manual**: once the harness has run for a real session, a published
+  HTML page describing what got built and how to drive it.
 
-## Grounded in Anthropic's own documentation, not guesswork
+## Grounded in Anthropic's docs
 
-Every mechanic this generates is built on how Claude Code actually works and what
-Anthropic's own published guidance for it recommends — checked against the current docs
-directly, not assumed from memory:
+The mechanics follow Claude Code's documented behavior, checked against the current docs
+rather than assumed:
 
-- **`CLAUDE.md` discipline** — the under-200-line target, "include what Claude can't
-  guess, exclude what it can derive," path-scoped rules for detail that only sometimes
-  applies — straight from Anthropic's own memory and best-practices guidance.
-- **Hooks for certainty, judgment calls for everything else** — deterministic checks as
-  `command` hooks; anything needing real judgment as `prompt`/`agent` hooks; every guard
-  fails open on its own internal error — matching Claude Code's actual hook contract, not
-  a home-grown assumption about it.
-- **Subagents with real context isolation and an explicit tool allowlist** — reviewers
-  stay read-only, each call starts with a genuinely fresh context, per how Claude Code's
-  subagent contract actually works.
-- **Native auto memory, not a reinvented one** — Claude Code ships its own cross-session
-  memory now, so the harness relies on that instead of building a redundant custom system;
-  a call made specifically because of what the current docs say it already does.
-- **Cost-aware model tiers** — cheapest tier that reliably does the job by default, Opus
-  reserved for genuinely high-stakes cases, following Claude Code's own model-routing
-  behavior rather than an arbitrary convention.
+- **`CLAUDE.md` discipline**: the under-200-line target, "include what Claude can't
+  guess", path-scoped rules for detail that only sometimes applies.
+- **Hooks**: deterministic checks as `command` hooks, judgment calls as `prompt`/`agent`
+  hooks, and every guard fails open on its own internal error.
+- **Subagents**: reviewers are read-only with an explicit tool allowlist, and each call
+  starts with a fresh context.
+- **Native auto memory** instead of a reinvented one.
+- **Cost-aware model tiers** that follow Claude Code's own model routing.
 
-This isn't a one-time read. The two spec files below get re-checked against the current
-docs periodically and updated when something's changed or turned out to be wrong — this
-project has caught and discarded an outright wrong claim about Claude Code's model lineup
-this way before it ever made it into a generated harness, rather than just trusting the
-first plausible-sounding answer.
+The spec files are re-checked against the docs from time to time. That has already
+caught a wrong claim about the model lineup before it reached a generated harness.
 
-## How it works, and how to change it
+## How it works
 
-The actual logic lives in `plugin/skills/init/`:
+The logic lives in [`plugin/skills/init/`](plugin/skills/init/):
 
-- **`SKILL.md`** — the skill's entry point and trigger description.
-- **`BOOTSTRAP.md`** — checks whether a harness already exists, profiles the project from
-  its description, writes the `CLAUDE.md`, hands off to build the rest.
-- **`HARNESS_REFERENCE.md`** — the full file-by-file harness spec: the hook lifecycle
-  table, the trait → agent derivation table, the `settings.json` skeleton, and the
-  Operator's Manual recipe.
+- **`SKILL.md`**: entry point and trigger description.
+- **`BOOTSTRAP.md`**: checks for an existing harness, profiles the project, writes
+  `CLAUDE.md`, hands off to build the rest.
+- **`HARNESS_REFERENCE.md`**: the file-by-file spec, including the hook lifecycle, the
+  trait → agent derivation table, the `settings.json` skeleton and the Operator's Manual
+  recipe.
 
-Those two files *are* the project — edit them to change what gets built. Test changes
-locally before publishing:
-
-```bash
-claude --plugin-dir ./plugin
-```
-
-then either describe a project, or run `/harness-bootstrap:init` explicitly. Validate the
-manifest with `claude plugin validate ./plugin` before committing a change.
+Edit those files to change what gets built.
 
 ## Contributing
 
-It's been run for real (not just imagined) against a web app, a CLI, a published library,
-a desktop app, a real-time game server, Terraform infra-as-code, a polyglot monorepo, a
-Solidity smart contract, a real-time C++ audio plugin, and an ML research repo with
-notebooks — plus retrofitting onto existing, messy repos both with and without a prior
-harness. PRs welcome, especially runs against shapes it hasn't hit yet (embedded/IoT, a
-browser extension actually published to a store, compiler/language tooling, bioinformatics,
-robotics). Include what you profiled, what got built, and where the derivation logic
-guessed wrong.
+Runs on project shapes it hasn't seen yet are the most useful contribution (embedded /
+IoT, browser extensions, compiler tooling, bioinformatics, robotics). See
+[CONTRIBUTING.md](CONTRIBUTING.md) for local testing, the evals and validation.
+
+If this saved you setup time, a star helps other Claude Code users find it.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

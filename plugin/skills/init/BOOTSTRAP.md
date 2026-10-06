@@ -31,7 +31,8 @@
    using the profile from Step 1 to pick real hooks/agents/commands for *this* project,
    not the web-app examples shown there (those are illustrations of the pattern, not a
    fixed list).
-4. **Verify** every hook and `settings.json` per `HARNESS_REFERENCE.md` §1.8.
+4. **Verify** every hook and `settings.json` per `HARNESS_REFERENCE.md` §1.8, then run
+   Step 3's consistency check so `CLAUDE.md` only describes files that exist.
 5. **Publish the Operator's Manual** per `HARNESS_REFERENCE.md` Part 2, once the
    harness exists.
 6. Commit the result on a branch. Never push without being asked.
@@ -135,6 +136,23 @@ CLI in almost anything). (2) Step 0 found an existing mature harness — see the
 to frame that question. Either way, ask one focused question, offer the most likely
 options. For everything else — test framework choice, folder layout, which linter — pick
 the ecosystem-conventional default and move on.
+
+**No project type at all.** If the description names no platform or app type (web,
+mobile, desktop, CLI, backend service, library...), e.g. "I want to build an app", don't
+pick a stack for the user. Ask exactly one question, "What kind of app is this?", with 3-4
+short options and one marked recommended, e.g. *A website or web app (Recommended)* /
+*A mobile app* / *A command-line tool* / *Something else (describe it)*. If no answer can
+come (a non-interactive session), build a **stack-neutral minimal harness** instead of
+guessing:
+
+- no framework- or language-specific agents, commands, rules or build gates;
+- generic guard hooks only: the push guard and the secret scan;
+- `CLAUDE.md` states the single assumption plainly ("the project type wasn't given, so
+  this harness is stack-neutral") and says to re-run `/harness-bootstrap:init` with a
+  description once the stack is chosen;
+- don't invent a project name or anything else to fill gaps; leave it unnamed;
+- the closing message still asks the question, with its options and the recommended one,
+  so the user can answer it on the re-run.
 
 ---
 
@@ -287,6 +305,17 @@ Hand off to `HARNESS_REFERENCE.md`:
   exit code, and validate `settings.json` parses, before calling the harness done.
 - **Part 2** — once the harness has run for at least one real session, publish the
   Operator's Manual artifact (real inventory counts, not estimates).
+
+**Consistency check — before reporting done.** List every agent, hook, command, skill and
+rule file that `CLAUDE.md` (and `settings.json`) mentions, and confirm each one exists on
+disk. If any write was blocked or denied (writes into `.claude/` need permission, and the
+user may refuse it), edit `CLAUDE.md` so it lists only what was actually written; never
+leave it describing files that don't exist. The closing message then names what is
+missing and why: list each planned agent, hook and command that wasn't written, by name
+and with its one-line purpose, and say why (e.g. "not written because the write into
+`.claude/` was denied; re-run `/harness-bootstrap:init` and allow it to finish"). Do this
+even if writing stopped early: name the full set the profile called for, not only the
+files you got as far as attempting.
 
 Report back to the user in plain language what got built and why — the stack you
 detected, the agents/hooks you chose and the trait that justified each one, the model
