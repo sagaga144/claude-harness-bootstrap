@@ -327,14 +327,28 @@ The skeleton every project needs (adapt hook commands/agents to your stack):
     ]
   },
   "hooks": {
-    "SessionStart": [{ "hooks": [{ "type": "command", "command": "node .claude/hooks/critical-rules.cjs" }] }],
-    "PreToolUse": [{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "node .claude/hooks/guard-bash.cjs" }] }],
-    "PostToolUse": [{ "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "node .claude/hooks/warn-debug-print.cjs" }] }],
-    "Stop": [{ "hooks": [{ "type": "command", "command": "node .claude/hooks/build-gate.cjs", "timeout": 60000 }] }]
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/critical-rules.cjs"] }] }],
+    "PreToolUse": [{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-bash.cjs"] }] }],
+    "PostToolUse": [{ "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/warn-debug-print.cjs"] }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/build-gate.cjs"], "timeout": 60 }] }]
   },
   "mcpServers": {}
 }
 ```
+
+Two details in that skeleton are easy to get wrong:
+
+- **Anchor every hook script to `${CLAUDE_PROJECT_DIR}`, in exec form** (`"command": "node"`
+  plus `"args": [...]`), never a bare relative path like `node .claude/hooks/x.cjs`. Claude
+  Code runs a hook in the session's current directory, which can follow a `cd`; from a
+  subfolder a relative path finds no script, Node exits 1, and Claude Code treats that as a
+  non-blocking error, so the guard does nothing. `${CLAUDE_PROJECT_DIR}` always points at
+  the project root, and the exec form needs no shell quoting, so it works the same on
+  Windows and POSIX. Inside a hook script, resolve project paths from
+  `process.env.CLAUDE_PROJECT_DIR` (then the payload's `cwd`), not `process.cwd()` alone.
+- **`timeout` is in seconds**, not milliseconds. Leave it out to get Claude Code's default
+  (600 for a command hook); set it lower for a gate that should give up sooner, as the
+  build gate above does with `60`.
 
 > The `permissions.deny` list above protects *this coding session* — it stops Claude from
 > reading the user's real, live secrets while building and working in the harness. It says
@@ -347,7 +361,7 @@ The skeleton every project needs (adapt hook commands/agents to your stack):
 
 ### 1.8 Verify before trusting it
 
-Pipe a sample JSON payload into each hook script directly (`echo '{"tool_input":{...}}' | node .claude/hooks/x.cjs`) and confirm the exit code matches intent (`0` = allow, `2` = block). Validate `settings.json` parses. Then dry-run `/verify` and one orchestrator end-to-end. Commit on a branch; never push from inside the build-out.
+Pipe a sample JSON payload into each hook script directly (`echo '{"tool_input":{...}}' | node .claude/hooks/x.cjs`) and confirm the exit code matches intent (`0` = allow, `2` = block). Run each blocking guard once more from a subfolder with `CLAUDE_PROJECT_DIR` set to the project root, the way Claude Code would after a `cd`, and confirm it still blocks rather than crashing. Validate `settings.json` parses, and that every hook command uses the `${CLAUDE_PROJECT_DIR}` form from §1.7. Then dry-run `/verify` and one orchestrator end-to-end. Commit on a branch; never push from inside the build-out.
 
 **Watch for a self-tripping test when verifying a push/secret-guard hook specifically.**
 If that hook is already wired into `settings.json` and you test it by running

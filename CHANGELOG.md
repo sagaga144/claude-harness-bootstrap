@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.6.2 (2026-10-10)
+
+Two fixes to the `settings.json` the plugin generates. Harnesses generated before this
+keep working; re-run `/harness-bootstrap:init` on a project to pick these up.
+
+- **Hooks are anchored to the project root.** Generated hooks now start as
+  `"command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/x.cjs"]` instead of
+  `node .claude/hooks/x.cjs`. Claude Code runs a hook in the session's current directory;
+  if that is ever a subfolder, a relative path finds no script and the guard does nothing.
+  This is the form Claude Code's hooks docs recommend, and it works the same on Windows
+  and POSIX. We couldn't make a live session hit the relative-path case, so this is
+  hardening rather than a fix for something seen in use.
+- **Hook timeouts are in seconds.** The build gate's `"timeout": 60000` meant about 17
+  hours, not 60 seconds; it is now `60`.
+- The setup's own check (`HARNESS_REFERENCE.md` §1.8) now runs each guard from a subfolder
+  too, and checks every hook uses the anchored form.
+
+Also in the repo, not the plugin: a hook attack suite (`scripts/test-hooks.mjs`), a
+per-model eval runner (`--model`, `--runs`, `--release`, `--major`), and the roadmap to
+v1.0 in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
 ## 0.6.1 (2026-10-06)
 
 No change to what the plugin generates.
