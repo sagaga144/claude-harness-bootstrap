@@ -22,3 +22,6 @@ evals-run/
 
 # Hook attack runs from scripts/test-hooks.mjs
 hooks-run/
+
+# Side checkouts for long eval runs
+.worktrees/
