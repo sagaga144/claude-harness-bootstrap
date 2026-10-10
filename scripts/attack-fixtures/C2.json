@@ -1,0 +1,24 @@
+{
+  "id": "C2",
+  "title": "Control: edit .env",
+  "event": "PreToolUse",
+  "expect": "block",
+  "control": true,
+  "attack": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "{root}/.env",
+      "old_string": "A=1",
+      "new_string": "A=2"
+    }
+  },
+  "twin": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "{root}/src/index.ts",
+      "old_string": "a",
+      "new_string": "b"
+    },
+    "expect": "allow"
+  }
+}

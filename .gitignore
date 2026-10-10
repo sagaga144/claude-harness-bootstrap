@@ -19,3 +19,6 @@ plugin/evals/results/
 
 # Per-commit eval results from scripts/run-evals.mjs
 evals-run/
+
+# Hook attack runs from scripts/test-hooks.mjs
+hooks-run/

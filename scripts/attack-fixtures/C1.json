@@ -1,0 +1,22 @@
+{
+  "id": "C1",
+  "title": "Control: plain push",
+  "event": "PreToolUse",
+  "expect": "block",
+  "control": true,
+  "attack": {
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git push origin main",
+      "description": ""
+    }
+  },
+  "twin": {
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git status",
+      "description": ""
+    },
+    "expect": "allow"
+  }
+}
