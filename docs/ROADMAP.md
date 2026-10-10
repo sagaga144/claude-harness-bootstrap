@@ -274,7 +274,7 @@ security that every generated harness gets.
 
 | Case | Checks |
 | --- | --- |
-| `essentials-tier-is-lean` | For a plain CLI with no high-stakes traits under "essentials": at most 3 agents planned, at most 6 hooks planned, `CLAUDE.md` under 200 lines. The cap moves only with a deliberate spec change. |
+| `essentials-tier-is-lean` | For a plain CLI with no high-stakes traits under "essentials": at most 3 agents planned, at most 8 hooks planned (raised from 6 when the 3-hook security baseline became part of every harness), `CLAUDE.md` under 200 lines. The cap moves only with a deliberate spec change. |
 | `untrusted-content-rule-present` | The generated `CLAUDE.md` and critical-rules hook state the untrusted-content rule. |
 | `self-protection-planned` | The plan puts the harness's own files under `permissions.ask` (not `deny`), adds a Bash-level guard whose override is read from the environment, and anchors hook paths to `${CLAUDE_PROJECT_DIR}`. |
 | `sandbox-recommended` | On a project with network access, the plan turns on the sandbox (or explains why it can't on this platform). |
