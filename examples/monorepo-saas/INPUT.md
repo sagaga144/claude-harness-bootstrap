@@ -9,9 +9,14 @@
 1. Cost vs. thoroughness: **Keep cost low** (recommended to start)
 2. How much to build now: **Just the essentials for now** (recommended to start)
 
-**Generated with:** harness-bootstrap v0.5.3, in a fresh empty folder. Gaps this run exposed
-were fixed in v0.5.4; see the [changelog](../../CHANGELOG.md#054-2026-09-09).
+**Generated with:** harness-bootstrap v0.7.0 (commit `a45908e`), in a fresh empty folder,
+by `scripts/generate-example.mjs`: a real Claude Code session (default model) whose
+permission prompts were answered by a fixed policy (write only inside the project folder,
+no network or install commands) instead of a person. The session reached its usage limit
+just before its final commit, after writing every file; the file list in `CLAUDE.md` was
+checked against disk afterwards and matches.
 
-`CLAUDE.md` and `.claude/` are copied as generated. Removed: `.claude/session-data/`
-(local hook-test fixtures and an unpublished Operator's Manual draft) and the project code
-the run scaffolded alongside the harness.
+`CLAUDE.md` and `.claude/` are copied as generated. Attack suite on this harness: 13 of 13
+attacks blocked counting permission rules, 8 of 13 by hooks alone, the same from a
+subfolder ([matrix](../../docs/baselines/hooks-v0.7.0.md)). The v0.5.3 harness this
+replaces blocked 0 of 13 by hooks.

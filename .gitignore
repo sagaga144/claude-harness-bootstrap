@@ -25,3 +25,6 @@ hooks-run/
 
 # Side checkouts for long eval runs
 .worktrees/
+
+# Local dev tooling (Agent SDK for example generation)
+.tools/

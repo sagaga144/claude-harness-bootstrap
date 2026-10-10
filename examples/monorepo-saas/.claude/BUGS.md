@@ -1,5 +1,5 @@
-# Bug Tracking Log
+# Bug log
 
-No bugs logged yet — this file grows as the project accumulates real ones.
-Format: date, symptom, root cause, fix, and which package it was in
-(backend/frontend/contracts).
+One entry per real bug: date, symptom, root cause, fix, and the guard (test/hook/reviewer rule) that now prevents it.
+
+<!-- newest first -->

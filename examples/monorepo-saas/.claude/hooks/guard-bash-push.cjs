@@ -1,42 +1,24 @@
 #!/usr/bin/env node
-// PreToolUse: Bash — blocks git push and publish commands unless explicitly
-// overridden. Exit 0 = allow, exit 2 = block. Fails open on internal error
-// (an allow, not a block) so a bug here never wedges the session.
+// PreToolUse: Bash|PowerShell. Blocks pushes and publishes unless the session was
+// started with ALLOW_PUSH=1. Exit 0 = allow, 2 = block. Fails open on its own errors.
 "use strict";
-
-function readStdin() {
-  try {
-    const data = require("fs").readFileSync(0, "utf8");
-    return data ? JSON.parse(data) : {};
-  } catch {
-    return {};
-  }
-}
-
-const BLOCK_PATTERNS = [
-  /\bgit\s+push\b/i,
+const GIT_OPTS = String.raw`(?:\s+(?:-C|-c|--git-dir|--work-tree|--namespace)\s+\S+|\s+-{1,2}[\w-]+(?:=\S+)?)*`;
+const PATTERNS = [
+  new RegExp(String.raw`\bgit${GIT_OPTS}\s+push\b`, "i"),
+  /\b(?:npm|pnpm|yarn)\s+publish\b/i,
   /\bcargo\s+publish\b/i,
-  /\bnpm\s+publish\b/i,
-  /\byarn\s+publish\b/i,
-  /\bpnpm\s+publish\b/i,
+  /\bgh\s+release\s+create\b/i,
+  /\bgh\s+pr\s+merge\b/i,
 ];
-
 try {
   if (process.env.ALLOW_PUSH === "1") process.exit(0);
-
-  const input = readStdin();
-  const command = (input && input.tool_input && input.tool_input.command) || "";
-
-  const hit = BLOCK_PATTERNS.some((re) => re.test(command));
-  if (hit) {
-    console.error(
-      "Blocked: this looks like a push/publish command. Set ALLOW_PUSH=1 to override, " +
-        "or ask the user to run it themselves. (matched in: " + JSON.stringify(command) + ")"
-    );
+  const input = JSON.parse(require("fs").readFileSync(0, "utf8") || "{}");
+  const cmd = String((input.tool_input && input.tool_input.command) || "");
+  if (PATTERNS.some((re) => re.test(cmd))) {
+    console.error("Blocked: this pushes, merges or publishes. Ask the user to run it, or restart the session with ALLOW_PUSH=1.");
     process.exit(2);
   }
   process.exit(0);
-} catch (err) {
-  // fail open
+} catch {
   process.exit(0);
 }

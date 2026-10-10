@@ -1,25 +1,22 @@
 ---
-description: Build → type-check → domain-guard scan → READY/NOT-READY across the whole monorepo before shipping.
+description: Full pre-ship gate. Runs Rust, contracts-drift, and web checks, then the reviewers the diff calls for, and ends READY or NOT-READY.
 ---
 
-Run this monorepo's real checks and report a plain verdict. Don't ask
-permission for each step — run them and report.
+Run every step even if an earlier one fails, then report one table (step | result | key error lines). Don't fix anything during `/verify`; report only.
 
-1. **Backend build**: `cargo check --workspace` from the repo root. If
-   `cargo`/`rustc` isn't installed, say so plainly and mark this step
-   "skipped — toolchain not installed", not "passed" and not "failed".
-2. **Frontend + contracts type-check**: `npm run typecheck --workspaces --if-present`
-   from the repo root (runs `tsc --noEmit` in both `packages/contracts` and
-   `packages/frontend`). If `node_modules` isn't populated, say so plainly
-   and mark "skipped — dependencies not installed", not "passed".
-3. **Contract-parity scan**: invoke the `correctness-reviewer` agent's
-   section 3 (contract parity) directly, scoped to whatever changed in this
-   session.
-4. **Domain-guard scan**: grep for anything touching `routes/auth.rs`,
-   `routes/billing.rs`, or an auth/billing frontend surface in the current
-   diff (`git diff --stat`); if found, say plainly that `security-reviewer`
-   must run before this ships and hasn't yet (unless it already has this
-   session).
-5. **Verdict**: print `READY` only if every step that actually ran passed
-   and no gated surface is missing its review; otherwise `NOT READY` with
-   the specific blocking reason(s).
+1. **Rust:** `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`
+2. **Contracts drift:** `npm run contracts:check` (regenerates the TS from `crates/contracts` and fails if `packages/contracts/src/generated` differs from what's committed)
+3. **Web:** `npm run typecheck -w packages/web` (Vite builds don't type-check; this is the real check), `npm run lint -w packages/web`, `npm test -w packages/web`, `npm run build -w packages/web`
+4. **Domain scan** of `git diff main...HEAD` plus uncommitted changes:
+   - an API-shaped `interface`/`type` declared in `packages/web` instead of imported from `@ledgerline/contracts`
+   - a handler returning `serde_json::json!` instead of a contract type
+   - `console.log`, `dbg!`, `println!` in shipped source
+   - a modified (not added) file in `crates/api/migrations/`
+5. **Reviewers.** Invoke via the Agent tool, passing the diff range and the changed file list explicitly in the prompt (they don't see this conversation):
+   - always: `correctness-reviewer`
+   - if any changed path matches auth/session/login/password/billing/payment/subscription/invoice/webhook, or touches the auth extractor or CORS/cookie config: `security-reviewer`
+   - if `crates/api/migrations/` or any sqlx query changed: `db-guard`
+
+If a toolchain is missing (no `cargo`, no `node_modules`), mark that step **SKIPPED (tool missing)**. That is NOT-READY, not a pass. If the scaffolding doesn't exist yet (no `Cargo.toml`/`package.json`), say so and stop.
+
+**Verdict:** READY only if every step passed and every reviewer verdict is PASS. Anything else is **NOT-READY**, with the blocking items listed first. Fail closed: an unclear result is NOT-READY.
