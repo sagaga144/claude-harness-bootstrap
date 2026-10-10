@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: check-never-auto-applies
+tags: [check]
+context:
+  scaffold_script: fixture.sh
