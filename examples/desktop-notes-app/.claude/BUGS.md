@@ -1,4 +1,11 @@
-# Bug tracking log
+# Bug Tracking Log
 
-Real bugs and traps found while building Local Notes go here, newest
-first. Empty at bootstrap — this file grows as the project does.
+One entry per real bug once it's fixed: date, symptom, root cause, fix, and the test that now guards it. Reviewers read this file, so add known reviewer false positives under their own heading too.
+
+## Bugs
+
+_None yet._
+
+## Reviewer false positives
+
+_None yet._

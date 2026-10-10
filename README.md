@@ -43,31 +43,29 @@ monorepo with real auth and payment data
 ├── agents/
 │   ├── backend-engineer.md
 │   ├── correctness-reviewer.md     # also checks frontend/backend type drift
+│   ├── db-guard.md                 # accounts and billing data
 │   ├── frontend-engineer.md
 │   ├── planner.md
 │   └── security-reviewer.md        # auth + payments
 ├── commands/
-│   ├── resume-session.md
-│   ├── save-session.md
 │   └── verify.md
 ├── hooks/
 │   ├── build-gate.cjs
-│   ├── cost-guard.cjs
 │   ├── critical-rules.cjs
-│   ├── guard-adhoc-doc.cjs
 │   ├── guard-bash-push.cjs
-│   ├── guard-protected-files.cjs
-│   ├── guard-secret-scan.cjs
-│   ├── note-sensitive-surface.cjs
-│   └── warn-debug-print.cjs
+│   ├── guard-harness.cjs           # security baseline: the harness protects itself
+│   ├── guard-remote-exec.cjs       # security baseline: no running fetched code
+│   ├── post-edit-notes.cjs
+│   ├── protect-files.cjs
+│   └── secret-scan.cjs
 ├── rules/
-│   ├── backend-rust.md
+│   ├── backend.md
 │   ├── contracts.md
-│   └── frontend-react.md
+│   └── frontend.md
 ├── skills/
-│   └── orch-add-feature/SKILL.md
+│   └── add-endpoint/SKILL.md
 ├── BUGS.md
-└── settings.json
+└── settings.json                   # ask rules on the harness, sandbox on
 ```
 
 Seven examples, each a different shape:
@@ -195,10 +193,15 @@ When you use it, Claude writes `CLAUDE.md` and `.claude/` into **your project** 
 Claude Code's normal file tools, under your usual permission prompts. What lands there is
 yours to read before you keep it:
 
-- **Hooks** are small Node scripts that run locally (push guard, secret scan, build gate).
-  None of them contact a server.
+- **Hooks** are small Node scripts that run locally (push guard, secret scan, build gate,
+  and two security guards: one that keeps shell commands from changing the harness's own
+  files, one that blocks running code fetched from the network). None of them contact a
+  server.
 - **`settings.json`** denies reading `.env`, `~/.ssh` and `~/.aws` and blocks `curl`,
-  `wget` and `ssh`, so the session stays away from your secrets.
+  `wget` and `ssh`, so the session stays away from your secrets. It asks you before any
+  change to the harness's own hooks, agents and settings, every time. It turns on Claude
+  Code's sandbox, which limits what shell commands can write and reach on macOS, Linux and
+  WSL2; native Windows has no sandbox, and the generated `CLAUDE.md` says so.
 - **MCP servers:** if your project already has a deploy or release target, the harness may
   suggest wiring a matching MCP server (for example `github`). You configure it and its
   credentials yourself; the plugin doesn't ship or start one.

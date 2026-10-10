@@ -3,27 +3,45 @@
   "permissions": {
     "deny": [
       "Read(.env)", "Read(**/.env)", "Read(~/.ssh/**)", "Read(~/.aws/**)",
-      "Bash(ssh:*)", "Bash(scp:*)", "Bash(curl:*)", "Bash(wget:*)"
+      "Read(**/*.tfstate)", "Read(**/*.tfstate.backup)",
+      "Bash(ssh:*)", "Bash(scp:*)", "Bash(curl:*)", "Bash(wget:*)",
+      "Bash(terraform apply:*)", "Bash(terraform destroy:*)"
+    ],
+    "ask": [
+      "Edit(.claude/hooks/**)", "Write(.claude/hooks/**)",
+      "Edit(.claude/agents/**)", "Write(.claude/agents/**)",
+      "Edit(.claude/settings.json)", "Write(.claude/settings.json)",
+      "Edit(.claude/settings.local.json)", "Write(.claude/settings.local.json)"
     ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "filesystem": { "allowWrite": ["~/.cache", "~/.terraform.d"] },
+    "network": {
+      "allowedDomains": [
+        "pypi.org", "files.pythonhosted.org",
+        "registry.terraform.io", "releases.hashicorp.com",
+        "github.com", "objects.githubusercontent.com"
+      ]
+    }
   },
   "hooks": {
-    "SessionStart": [
-      { "hooks": [{ "type": "command", "command": "node .claude/hooks/critical-rules.cjs" }] }
-    ],
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/critical-rules.cjs"] }] }],
     "PreToolUse": [
-      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "node .claude/hooks/guard-bash.cjs" }] },
-      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "node .claude/hooks/secret-scan.cjs" }] },
-      { "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "node .claude/hooks/protected-file-guard.cjs" }] }
+      { "matcher": "Bash|PowerShell", "hooks": [
+        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-bash-push.cjs"] },
+        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-harness.cjs"] },
+        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-remote-exec.cjs"] },
+        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-terraform.cjs"] },
+        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-secrets-commit.cjs"] }
+      ] },
+      { "matcher": "Edit|Write", "hooks": [
+        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-protected-files.cjs"] }
+      ] }
     ],
-    "PostToolUse": [
-      { "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "node .claude/hooks/domain-guard-note.cjs" }] }
-    ],
-    "PreModelSwitch": [
-      { "hooks": [{ "type": "command", "command": "node .claude/hooks/cost-guard.cjs" }] }
-    ],
-    "Stop": [
-      { "hooks": [{ "type": "command", "command": "node .claude/hooks/build-gate.cjs", "timeout": 90000 }] }
-    ]
-  },
-  "mcpServers": {}
+    "PostToolUse": [{ "matcher": "Edit|Write", "hooks": [
+      { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/post-edit.cjs"], "timeout": 30 }
+    ] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-gate.cjs"], "timeout": 60 }] }]
+  }
 }

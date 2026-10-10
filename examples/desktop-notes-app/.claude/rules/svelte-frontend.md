@@ -1,25 +1,15 @@
 ---
 paths:
-  - "src/**/*.svelte"
-  - "src/**/*.ts"
+  - "src/**"
 ---
 
-# Svelte + TypeScript frontend conventions
+# Svelte frontend conventions (src/)
 
-- Talk to the backend only through `src/lib/notes.ts` (or a sibling
-  `lib/*.ts` wrapper) — don't call `invoke()` directly from a `.svelte`
-  component. Keeps every Tauri command call typed and in one place to
-  audit against `src-tauri/capabilities/*.json`.
-- This is a local-first, single-window desktop app: no router, no
-  server-side rendering, no `fetch()` to anything but `tauri://` /
-  `asset://` internals. If a component needs remote data, that's a sign
-  the feature request needs a product conversation first, not just code.
-- Strict TypeScript (`strict: true` is already on in `tsconfig.json`) —
-  don't loosen it to unblock a type error, fix the type.
-- `vite build` does not type-check — `svelte-check` is the only thing
-  that catches a real type error here (the equivalent of the classic
-  `tsc --noEmit` gap other Vite/esbuild/SWC projects have). `npm run
-  build` succeeding is not proof the types are right.
-- Full-text search (`src/lib/search.ts`, MiniSearch) runs in the
-  renderer, in memory, over whatever the vault loader hands it — no
-  external search service, ever.
+- SvelteKit with `adapter-static` and `export const ssr = false` in the root `+layout.ts`. It's an SPA inside the Tauri webview, with no server and no `+page.server.ts`/`+server.ts`.
+- Svelte 5 runes only in new code: `$state`, `$derived`, `$effect`, `$props`. Shared state lives in `src/lib/state/*.svelte.ts` modules exporting rune-based objects, not legacy stores.
+- All IPC goes through `src/lib/api.ts`: one typed async function per Rust command, wrapping `invoke` and mapping `AppError` (`{ kind, message }`) to a typed error. Components never call `invoke` directly. Event subscriptions (`listen`) are wrapped there too and return the unlisten fn, which the caller tears down in `$effect`'s cleanup.
+- Markdown rendering: one module (`src/lib/markdown/`) parses and sanitizes (DOMPurify). It's the only producer of HTML passed to `{@html}`. Wikilinks `[[Note]]`/`[[Note|alias]]` and `#tags` are parsed there with linear-time patterns.
+- Editor: debounce autosave (around 500ms) and save on blur/close. Pass the loaded mtime to `saveNote` so the backend can detect conflicts, and show a conflict UI. Never silently overwrite.
+- Search box: debounce (around 150ms), cancel stale results by request id, and highlight using offsets returned by the backend rather than re-matching in JS.
+- Offline: assets (fonts, icons) are bundled locally in `static/`. Never import from a CDN.
+- Tests: Vitest for pure logic in `src/lib/**` (`*.test.ts` beside the file). Mock `@tauri-apps/api/core` `invoke` in tests.

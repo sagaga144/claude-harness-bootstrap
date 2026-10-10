@@ -1,47 +1,27 @@
 ---
-description: Fmt/validate/lint/type-check/test across both halves of the project, then READY/NOT-READY.
+description: Run every local check (Terraform fmt/validate/tflint/test, CLI ruff/mypy/pytest, guardrail scan) and report READY or NOT-READY.
 ---
 
-Run this project's full verification pass and report a single READY / NOT-READY
-verdict at the end. Don't stop at the first failure — run everything, then summarize.
+Run these in order from the project root. For each, record PASS / FAIL / SKIPPED (tool missing or nothing to check). Don't stop at the first failure. Run them all, then report.
 
-## Terraform (`infra/`)
+Never run `terraform apply|destroy` or `infra apply` as part of verification.
 
-1. `terraform fmt -check -recursive` from `infra/`.
-2. For each directory under `infra/environments/`: `terraform init -backend=false
-   -input=false` then `terraform validate`.
-3. If `terraform` is not installed, say so explicitly and mark this section
-   SKIPPED (toolchain missing), not FAILED — this is expected on a fresh
-   machine and must not block the rest of `/verify`.
+1. **TF format**: `terraform fmt -check -recursive`
+2. **TF validate**: for every directory under `modules/*` and `envs/*` containing `.tf` files: `terraform -chdir=<dir> init -backend=false -input=false` then `terraform -chdir=<dir> validate`.
+3. **TF lint**: `tflint --recursive` (SKIPPED if not installed. Say so.)
+4. **TF tests**: for each module with `*.tftest.hcl`: `terraform -chdir=<dir> test`. Every test must use `command = plan`. Flag any `command = apply` as FAIL.
+5. **CLI lint**: in `cli/`: `uv run ruff check .` and `uv run ruff format --check .`
+6. **CLI types**: in `cli/`: `uv run mypy src`
+7. **CLI tests**: in `cli/`: `uv run pytest -q`
+8. **Guardrail scan** (grep, no tools needed):
+   - No `force_destroy = true` outside `envs/dev` / module defaults.
+   - No `deletion_protection = false` or `skip_final_snapshot = true` in `envs/staging` or `envs/prod`.
+   - No `shell=True`, no `--auto-approve` accepted for prod, no `terraform apply` call without a plan-file argument in `cli/src`.
+   - Each guardrail in CLAUDE.md's "CLI guardrails" list has at least one refusal test in `cli/tests`.
+   - No staged `*.tfstate*`, `*.tfplan`, `.env`.
 
-## Python CLI (`cli/`)
+Report as a table (check | result | key error lines), then one line:
+**READY**: all PASS (SKIPPED only for tools that are genuinely optional, i.e. tflint), or
+**NOT-READY**: list what failed or couldn't run. If terraform itself isn't installed, the verdict is NOT-READY for any change that touched `.tf` files ("not validated" is not "valid").
 
-1. `ruff check .`
-2. `mypy .`
-3. `pytest -q`
-4. If a tool import fails with "module not installed," say so explicitly and
-   mark that check SKIPPED, not FAILED.
-
-## Domain-guard scan
-
-Grep the diff (staged + unstaged) for:
-- Any `.tf` change touching `aws_db_instance`, `aws_security_group`,
-  `aws_iam_role`/`aws_iam_policy`, or `deletion_protection` — flag that
-  `infra-security-reviewer` should look at this before merging, if it hasn't
-  already.
-- Any literal-looking secret in a `.tfvars` file (an `AKIA...` pattern, a
-  `-----BEGIN ... PRIVATE KEY-----` block).
-
-## Verdict
-
-- **READY** — every check that could run passed, and any RDS/security-group/
-  IAM/guardrail change was flagged for `infra-security-reviewer` (or already
-  reviewed).
-- **NOT-READY** — list exactly which check failed and why, file:line where
-  possible. A SKIPPED check (missing toolchain) does not by itself make the
-  verdict NOT-READY, but say so plainly in the summary so it isn't mistaken
-  for a pass.
-
-Remember: a READY verdict here is not permission to run `infra apply` against
-staging or prod — that still requires a human to read the `terraform plan`
-diff and run `apply` themselves.
+READY means "safe to hand to `/review-plan` and a human". It never means "applied" or "verified in AWS".

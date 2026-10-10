@@ -1,93 +1,91 @@
 #!/usr/bin/env node
-// Stop — runs the type-check gate once per turn-completion, blocks with
-// actionable errors on failure. Exit 2 = block (turn continues to fix),
-// exit 0 = allow the stop.
-//
-// Two ecosystems in this project (TS/Svelte via npm, Rust via cargo).
-// `npm run check` failing is always a real block. `cargo check` failing
-// with a compiler error is also a real block — but cargo simply not
-// being installed (ENOENT) is a missing-toolchain problem, not a code
-// problem, so that case fails open with a warning instead of blocking
-// every single turn on a machine that doesn't have Rust set up yet.
+// Stop. Type-checks what changed before Claude ends a turn: `npm run check` (svelte-check,
+// because Vite never type-checks) when frontend files changed, `cargo check` when Rust
+// files changed. Probes each toolchain first; a missing toolchain or unscaffolded project
+// is a warning, never a block. Skips if nothing changed since the last passing run.
+// Gives up after 3 consecutive blocks so a broken build can't loop the session.
+// Override: ALLOW_BUILD_FAIL=1. Exit 0 = allow, 2 = block. Fails open on its own errors.
+"use strict";
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
+const { spawnSync } = require("child_process");
 
-const { execSync } = require("child_process");
+const WIN = process.platform === "win32";
+const run = (cmd, args, cwd, timeout) =>
+  spawnSync(cmd, args, { cwd, encoding: "utf8", shell: WIN, timeout, stdio: ["ignore", "pipe", "pipe"], maxBuffer: 32 * 1024 * 1024 });
+const has = (bin) =>
+  (WIN ? spawnSync("where", [bin], { stdio: ["ignore", "pipe", "pipe"] }) : spawnSync("sh", ["-c", `command -v ${bin}`], { stdio: ["ignore", "pipe", "pipe"] })).status === 0;
+const tail = (s, n = 40) => String(s || "").trim().split(/\r?\n/).slice(-n).join("\n");
 
-function runCheck(cmd) {
-  try {
-    execSync(cmd, { stdio: ["ignore", "pipe", "pipe"], encoding: "utf8" });
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, output: (err.stdout || "") + (err.stderr || err.message || "") };
+try {
+  if (process.env.ALLOW_BUILD_FAIL === "1") process.exit(0);
+  const input = JSON.parse(fs.readFileSync(0, "utf8") || "{}");
+  const root = process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd();
+  const stateDir = path.join(root, ".claude", "session-data");
+  const stateFile = path.join(stateDir, "build-gate.json");
+  let state = {};
+  try { state = JSON.parse(fs.readFileSync(stateFile, "utf8")); } catch {}
+  const save = () => { try { fs.mkdirSync(stateDir, { recursive: true }); fs.writeFileSync(stateFile, JSON.stringify(state)); } catch {} };
+
+  const st = run("git", ["status", "--porcelain", "-uall"], root, 15000);
+  if (st.status !== 0) process.exit(0);
+  const changed = st.stdout.split(/\r?\n/).filter(Boolean).map((l) => l.slice(3).replace(/^.* -> /, "").replace(/"/g, ""));
+  const front = changed.filter((f) => /^(?:src\/|svelte\.config|vite\.config|tsconfig|package\.json)/.test(f));
+  const rust = changed.filter((f) => /^src-tauri\/(?:src\/|Cargo\.toml|build\.rs)/.test(f));
+  if (!front.length && !rust.length) process.exit(0);
+
+  const hash = crypto.createHash("sha1");
+  for (const f of [...front, ...rust]) {
+    hash.update(f);
+    try { hash.update(String(fs.statSync(path.join(root, f)).mtimeMs)); } catch { hash.update("gone"); }
   }
-}
+  const fingerprint = hash.digest("hex");
+  if (state.lastPass === fingerprint) process.exit(0);
 
-function isCommandMissing(cmd) {
-  const probe = process.platform === "win32" ? "where" : "which";
-  const bin = cmd.split(" ")[0];
-  try {
-    execSync(`${probe} ${bin}`, { stdio: ["ignore", "pipe", "pipe"] });
-    return false;
-  } catch {
-    return true;
-  }
-}
+  const failures = [];
+  const warnings = [];
 
-function main() {
-  let raw = "";
-  try {
-    raw = require("fs").readFileSync(0, "utf8");
-  } catch {
-    raw = "{}";
+  if (front.length) {
+    let pkg = null;
+    try { pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")); } catch {}
+    if (!pkg || !pkg.scripts || !pkg.scripts.check) warnings.push("frontend: no package.json `check` script yet, skipped svelte-check");
+    else if (!fs.existsSync(path.join(root, "node_modules"))) warnings.push("frontend: node_modules missing (run `npm install`), skipped svelte-check");
+    else if (!has("npm")) warnings.push("frontend: npm not on PATH, skipped svelte-check");
+    else {
+      const r = run("npm", ["run", "check"], root, 90000);
+      if (r.error && r.error.code === "ETIMEDOUT") warnings.push("frontend: svelte-check timed out, not verified");
+      else if (r.status !== 0) failures.push(`npm run check (svelte-check) failed:\n${tail(r.stdout + "\n" + r.stderr)}`);
+    }
   }
 
-  let payload;
-  try {
-    payload = JSON.parse(raw);
-  } catch {
-    payload = {};
+  if (rust.length) {
+    const manifest = path.join(root, "src-tauri", "Cargo.toml");
+    if (!fs.existsSync(manifest)) warnings.push("rust: no src-tauri/Cargo.toml yet, skipped cargo check");
+    else if (!has("cargo")) warnings.push("rust: cargo is not installed (https://rustup.rs), skipped cargo check");
+    else {
+      const r = run("cargo", ["check", "--manifest-path", manifest, "--message-format", "short", "--quiet"], root, 150000);
+      if (r.error && r.error.code === "ETIMEDOUT") warnings.push("rust: cargo check timed out (first build is slow), not verified");
+      else if (r.status !== 0) failures.push(`cargo check failed:\n${tail(r.stderr || r.stdout)}`);
+    }
   }
 
-  try {
-    if (payload.stop_hook_active) {
-      // Already in a stop-hook continuation loop — don't re-block.
+  if (failures.length) {
+    state.blocks = (state.blocks || 0) + 1;
+    save();
+    if (state.blocks > 3) {
+      console.error(`Build gate: still failing after 3 attempts, letting the turn end. Tell the user the build is broken:\n${failures.join("\n\n")}`);
       process.exit(0);
     }
-
-    const problems = [];
-
-    if (require("fs").existsSync("node_modules") && require("fs").existsSync("package.json")) {
-      const ts = runCheck("npm run check --silent");
-      if (!ts.ok) {
-        problems.push(`svelte-check failed:\n${ts.output.slice(0, 4000)}`);
-      }
-    } else {
-      process.stdout.write("build-gate: node_modules not installed yet, skipping svelte-check.\n");
-    }
-
-    if (require("fs").existsSync("src-tauri/Cargo.toml")) {
-      if (isCommandMissing("cargo")) {
-        process.stdout.write(
-          "build-gate: cargo not found on PATH, skipping cargo check " +
-          "(missing toolchain, not a code problem — install Rust to enable this gate).\n"
-        );
-      } else {
-        const rust = runCheck("cargo check --manifest-path src-tauri/Cargo.toml");
-        if (!rust.ok) {
-          problems.push(`cargo check failed:\n${rust.output.slice(0, 4000)}`);
-        }
-      }
-    }
-
-    if (problems.length > 0) {
-      process.stderr.write(problems.join("\n\n") + "\n");
-      process.exit(2);
-    }
-    process.exit(0);
-  } catch (err) {
-    // A bug in the gate itself must never wedge the session shut.
-    process.stderr.write(`build-gate.cjs internal error (failing open): ${err}\n`);
-    process.exit(0);
+    console.error(`Build gate blocked the turn. Fix these before finishing:\n\n${failures.join("\n\n")}`);
+    process.exit(2);
   }
-}
 
-main();
+  state.blocks = 0;
+  if (!warnings.length) state.lastPass = fingerprint;
+  save();
+  if (warnings.length) console.error(`Build gate (not blocking): ${warnings.join("; ")}`);
+  process.exit(0);
+} catch {
+  process.exit(0);
+}
