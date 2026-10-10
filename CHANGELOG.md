@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.7.0 (unreleased)
+
+Security, measured. Every harness now gets a baseline that holds up against the attacks
+coding agents actually face, and the repo can prove what it blocks.
+
+- **A security baseline in every harness, every tier.** Three parts, all in
+  `HARNESS_REFERENCE.md` §1.2.1:
+  - **The harness protects itself.** Changes to its own hooks, agents and settings ask
+    you every time (`ask` rules, which also cover shell writes like `sed -i` and `>`), and
+    a guard stops the shell tricks those rules can't see (`node -e`, `git restore`,
+    PowerShell file commands, switching hooks off). Its override is read from the
+    session's environment only, so a command that merely contains `ALLOW_HARNESS_EDIT=1`
+    can't switch it on.
+  - **Text from outside is data, not instructions.** Error messages, dependency READMEs,
+    issues, PR comments, web pages and tool output can't tell Claude to run a setup
+    script or an install. The rule is in `CLAUDE.md`, the critical-rules hook and every
+    agent.
+  - **Sandbox first, hooks second.** The sandbox is on where Claude Code supports it
+    (macOS, Linux, WSL2), with the stack's registry and caches allowed. A small guard
+    blocks piping downloads into a shell, running scripts from inside dependencies, DNS
+    lookups built from command output, and inline network calls. On native Windows,
+    where there is no sandbox, `CLAUDE.md` says so.
+- **The push guard catches `git -C <dir> push`** and other option forms, and matches
+  PowerShell as well as Bash.
+- `settings.json` no longer carries an `mcpServers` key; project MCP servers belong in
+  `.mcp.json`.
+
+**Measured**
+
+- New hook attack suite (`scripts/test-hooks.mjs`): 13 attacks, 2 controls, each with a
+  harmless twin that must not be blocked, run from the project root and from a subfolder.
+  The v0.6.1 example harnesses blocked 0 of 13 with hooks (2 of 13 counting permission
+  rules). The regenerated monorepo example blocks 8 of 13 with hooks and 13 of 13
+  counting its rules ([matrix](docs/baselines/hooks-v0.7.0.md)).
+- The reference hooks are tested straight from the spec (`scripts/check-reference.mjs`).
+- Evals now run per model (`--model`, `--runs`, `--release`, `--major`). The first
+  per-model baseline: v0.6.1 passes 3 of 8 on Haiku and 3 of 6 on Sonnet
+  ([details](docs/baselines/evals-v0.6.1.md)); the 8/8 was the default model.
+- The skill now also triggers for "set up Claude Code for this existing repo"; on Haiku
+  and Sonnet it was skipped for retrofits.
+- Four new eval cases (12 in total): lean essentials, the untrusted-content rule,
+  self-protection, and the sandbox.
+
 ## 0.6.2 (2026-10-10)
 
 Two fixes to the `settings.json` the plugin generates. Harnesses generated before this
