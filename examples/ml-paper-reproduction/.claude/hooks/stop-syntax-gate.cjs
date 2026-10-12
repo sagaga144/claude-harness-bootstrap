@@ -17,15 +17,16 @@
 
 const fs = require("fs");
 const path = require("path");
-const { execSync } = require("child_process");
+const { execFileSync } = require("child_process");
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const EXCLUDE_DIRS = new Set([".git", "data", "checkpoints", "wandb", "runs", "venv", ".venv", "__pycache__", "node_modules", ".ipynb_checkpoints"]);
 
 function hasCommand(cmd) {
   try {
-    const probe = process.platform === "win32" ? `where ${cmd}` : `command -v ${cmd}`;
-    execSync(probe, { stdio: ["ignore", "pipe", "pipe"] });
+    // The name goes in as an argument, never spliced into a shell string.
+    if (process.platform === "win32") execFileSync("where", [cmd], { stdio: ["ignore", "pipe", "pipe"] });
+    else execFileSync("sh", ["-c", 'command -v "$1"', "sh", cmd], { stdio: ["ignore", "pipe", "pipe"] });
     return true;
   } catch {
     return false; // probe itself says "not found" -- not an inference from a later failure
@@ -79,7 +80,7 @@ function checkPythonSyntax(files) {
     return [];
   }
   try {
-    execSync(`python -m py_compile ${files.map((f) => JSON.stringify(f)).join(" ")}`, {
+    execFileSync("python", ["-m", "py_compile", ...files], {
       stdio: ["ignore", "pipe", "pipe"],
     });
     return [];

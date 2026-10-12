@@ -14,16 +14,17 @@
 // a plain warning when the toolchain is simply absent -- only a real
 // configure failure blocks.
 
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
 function commandExists(cmd) {
   try {
-    // Windows: `where`. POSIX: `command -v`. Explicit stdio so a "not
-    // found" message never leaks into the transcript.
-    const probe = process.platform === 'win32' ? `where ${cmd}` : `command -v ${cmd}`;
-    execSync(probe, { stdio: ['ignore', 'pipe', 'pipe'] });
+    // Windows: `where`. POSIX: `command -v`, with the name passed as an argument rather
+    // than spliced into the command string. Explicit stdio so a "not found" message never
+    // leaks into the transcript.
+    if (process.platform === 'win32') execFileSync('where', [cmd], { stdio: ['ignore', 'pipe', 'pipe'] });
+    else execFileSync('sh', ['-c', 'command -v "$1"', 'sh', cmd], { stdio: ['ignore', 'pipe', 'pipe'] });
     return true;
   } catch {
     return false;
@@ -53,7 +54,7 @@ function main() {
   const buildDir = path.join(projectRoot, 'build');
 
   try {
-    execSync(`cmake -S "${projectRoot}" -B "${buildDir}"`, {
+    execFileSync('cmake', ['-S', projectRoot, '-B', buildDir], {
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: 55000,
     });

@@ -8,6 +8,7 @@
 //   node scripts/run-evals.mjs --model haiku --model sonnet --runs 3
 //   node scripts/run-evals.mjs --release       # Haiku + Sonnet, with the plugin only, 1 run each
 //   node scripts/run-evals.mjs --major         # Haiku, Sonnet, Opus, Fable; both arms; 3 runs each
+//   node scripts/run-evals.mjs --heldout C:/path/to/heldout-evals --model sonnet --runs 3
 //   node scripts/run-evals.mjs --wait-min 20 --max-tries 12
 //
 // Results: evals-run/<commit>/<model>/<case>.json plus evals-run/<commit>/SUMMARY.md,
@@ -15,9 +16,9 @@
 // without errors is skipped, so re-running after an interruption picks up where it
 // left off. With no --model, the account's default model runs, filed under "default".
 
-import { spawnSync, execSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
@@ -36,12 +37,39 @@ const models = many('--model').length > 0 ? many('--model') : preset.models.leng
 const onlyWith = flag('--only-with') || preset.onlyWith;
 const runs = opt('--runs', preset.runs);
 
-const root = execSync('git rev-parse --show-toplevel').toString().trim();
-const commit = execSync('git rev-parse --short HEAD').toString().trim();
-const dirty = execSync('git status --porcelain -- plugin').toString().trim() !== '';
-const outRoot = join(root, 'evals-run', commit + (dirty ? '-dirty' : ''));
+const git = (...a) => execFileSync('git', a).toString().trim();
+const root = git('rev-parse', '--show-toplevel');
+const commit = git('rev-parse', '--short', 'HEAD');
+const dirty = git('status', '--porcelain', '--', 'plugin') !== '';
 
-const evalsDir = join(root, 'plugin', 'evals');
+// On Windows, npm installs claude as a .cmd shim, which Node can only start through a
+// shell. Find the executable the shim wraps and run that instead, so the eval arguments
+// (file paths included) never go through a shell.
+function claudeBin() {
+  if (process.platform !== 'win32') return { bin: 'claude', shell: false };
+  try {
+    const shim = execFileSync('where', ['claude.cmd']).toString().split(/\r?\n/)[0].trim();
+    const target = /"%dp0%\\([^"]+\.exe)"/i.exec(readFileSync(shim, 'utf8'))?.[1];
+    if (target && existsSync(join(dirname(shim), target))) return { bin: join(dirname(shim), target), shell: false };
+  } catch { /* fall through */ }
+  return { bin: 'claude', shell: true };
+}
+const claude = claudeBin();
+
+// --heldout <dir>: run the held-out cases in <dir>/cases against a copy of this plugin made
+// inside <dir>, and keep their results there too. Nothing about them lands in this repo,
+// where the improvement loop's sessions could read it.
+const heldout = opt('--heldout');
+const tag = commit + (dirty ? '-dirty' : '');
+const outRoot = heldout ? join(heldout, 'results', tag) : join(root, 'evals-run', tag);
+const evalRoot = heldout ? join(heldout, 'runs', tag) : root;
+if (heldout) {
+  rmSync(evalRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  cpSync(join(root, 'plugin'), join(evalRoot, 'plugin'), { recursive: true, filter: (src) => !/[\\/]evals[\\/]results/.test(src) });
+  cpSync(join(heldout, 'cases'), join(evalRoot, 'plugin', 'heldout'), { recursive: true });
+}
+
+const evalsDir = join(evalRoot, 'plugin', heldout ? 'heldout' : 'evals');
 const cases = readdirSync(evalsDir, { withFileTypes: true })
   .filter((d) => d.isDirectory() && d.name !== 'results')
   .map((d) => d.name)
@@ -75,12 +103,12 @@ for (const model of models) {
     }
     for (let attempt = 1; attempt <= maxTries; attempt++) {
       console.log(`> ${model} ${c}: attempt ${attempt}`);
-      const cmd = ['plugin', 'eval', './plugin', '--case', c, '--scaffold', '--allow-tools', 'Write', 'Edit',
+      const cmd = ['plugin', 'eval', './plugin', ...(heldout ? ['--eval-dir', 'heldout'] : []), '--case', c, '--scaffold', '--allow-tools', 'Write', 'Edit',
         '--no-publish', '--json', file,
         ...(model === 'default' ? [] : ['--model', model]),
         ...(runs ? ['--runs', String(runs)] : []),
         ...(onlyWith ? ['--ablation', 'none'] : [])];
-      spawnSync('claude', cmd, { cwd: root, stdio: ['ignore', 'ignore', 'inherit'], shell: process.platform === 'win32' });
+      spawnSync(claude.bin, cmd, { cwd: evalRoot, stdio: ['ignore', 'ignore', 'inherit'], shell: claude.shell });
       const why = existsSync(file) ? interruption(JSON.parse(readFileSync(file, 'utf8'))) : 'no result written';
       if (!why) { console.log(`  recorded`); break; }
       console.log(`  interrupted (${why.slice(0, 80)}); waiting ${waitMin} min`);

@@ -12,10 +12,13 @@ const crypto = require("crypto");
 const { spawnSync } = require("child_process");
 
 const WIN = process.platform === "win32";
+// Windows can start npm-style tools (.cmd shims) only through a shell; they're only ever
+// given fixed arguments. Everything else runs without a shell, arguments as a list.
+const SHIMS = new Set(["npm", "npx", "pnpm", "yarn"]);
 const run = (cmd, args, cwd, timeout) =>
-  spawnSync(cmd, args, { cwd, encoding: "utf8", shell: WIN, timeout, stdio: ["ignore", "pipe", "pipe"], maxBuffer: 32 * 1024 * 1024 });
+  spawnSync(cmd, args, { cwd, encoding: "utf8", shell: WIN && SHIMS.has(cmd), timeout, stdio: ["ignore", "pipe", "pipe"], maxBuffer: 32 * 1024 * 1024 });
 const has = (bin) =>
-  (WIN ? spawnSync("where", [bin], { stdio: ["ignore", "pipe", "pipe"] }) : spawnSync("sh", ["-c", `command -v ${bin}`], { stdio: ["ignore", "pipe", "pipe"] })).status === 0;
+  (WIN ? spawnSync("where", [bin], { stdio: ["ignore", "pipe", "pipe"] }) : spawnSync("sh", ["-c", 'command -v "$1"', "sh", bin], { stdio: ["ignore", "pipe", "pipe"] })).status === 0;
 const tail = (s, n = 40) => String(s || "").trim().split(/\r?\n/).slice(-n).join("\n");
 
 try {

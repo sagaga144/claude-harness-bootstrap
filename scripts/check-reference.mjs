@@ -8,11 +8,11 @@
 // A block is marked in the spec by an HTML comment on the line before its fence:
 //   <!-- reference: .claude/hooks/guard-harness.cjs -->
 
-import { execSync, spawnSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
-const root = execSync('git rev-parse --show-toplevel').toString().trim()
+const root = execFileSync('git', ['rev-parse', '--show-toplevel']).toString().trim()
 const spec = readFileSync(join(root, 'plugin', 'skills', 'init', 'HARNESS_REFERENCE.md'), 'utf8')
 const out = join(root, 'hooks-run', 'reference-harness')
 rmSync(out, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
@@ -23,7 +23,7 @@ for (const [, path, body] of blocks) {
   mkdirSync(dirname(join(out, path)), { recursive: true })
   writeFileSync(join(out, path), body + '\n')
   if (path.endsWith('.json')) JSON.parse(body)
-  else if (path.endsWith('.cjs')) execSync(`node --check "${join(out, path)}"`)
+  else if (path.endsWith('.cjs')) execFileSync(process.execPath, ['--check', join(out, path)])
   console.log(`extracted ${path}`)
 }
 

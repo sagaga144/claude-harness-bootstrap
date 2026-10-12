@@ -15,3 +15,9 @@ were fixed in v0.5.6; see the [changelog](../../CHANGELOG.md#056-2026-09-09).
 `CLAUDE.md` and `.claude/` are copied as generated. Removed: `.claude/session-data/`
 (local hook-test fixtures and an unpublished Operator's Manual draft) and the project code
 the run scaffolded alongside the harness.
+
+**Edited after generation (2026-10-12):** `.claude/hooks/build-gate.cjs` ran child processes through shell command
+strings built with template literals, which security scanners flag as shell injection.
+It now passes arguments as a list without a shell (`execFileSync`/`spawnSync`); behavior
+is unchanged and was re-tested. The spec was fixed in the same change
+(`HARNESS_REFERENCE.md` §1.8), so newly generated harnesses don't do this.

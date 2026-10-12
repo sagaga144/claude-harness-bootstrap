@@ -553,16 +553,27 @@ must explicitly control the child's `stdio`, not rely on Node's default.** By de
 child's stderr is inherited straight through to the parent process, so a failing subprocess
 prints its raw error output into the transcript even when the hook's own `try/catch`
 correctly fails open — the block never happens, but it *looks* broken. Concretely:
-`execSync(cmd, { stdio: ["ignore", "pipe", "pipe"] })` and read the output off `err.stdout`/
+`execFileSync("git", ["diff", "--cached"], { stdio: ["ignore", "pipe", "pipe"] })` and read the output off `err.stdout`/
 `err.message` in the catch block, don't let it print itself. This bit a real secret-scan hook
 that ran `git diff --cached` before the repo had a first commit — no error text like "not a
 git repository," just git falling back to `--no-index` mode and dumping its full ~130-line
 usage text to stderr on every verification run.
 
+**Run every child process without a shell, arguments as a list: never a command string
+built from variables.** `execFileSync("cmake", ["-S", root, "-B", buildDir])`, never
+`execSync` on a template string with the paths spliced in. A path or file name spliced into a
+shell string can break the command or run something else (a space, a quote, a `&` in a
+folder name), and security scanners flag the pattern as shell injection even when every
+value is fixed. The one exception is Windows' npm-style shims (`npm`, `npx`, `pnpm`,
+`yarn`), which Node can only start through a shell there: use `shell: true` for those alone,
+and only ever with fixed arguments.
+
 **A `Stop`/build-gate hook (or any hook shelling out to the project's own toolchain) must
 tell "the tool isn't installed" apart from "the check failed" — only the second one blocks.**
 Check for the toolchain **first**, before ever attempting the real command — an explicit
-probe (`where <cmd>` on Windows, `command -v <cmd>` elsewhere) run ahead of time, not
+probe run ahead of time, with the tool's name passed as an argument
+(`execFileSync("where", [cmd])` on Windows,
+`execFileSync("sh", ["-c", 'command -v "$1"', "sh", cmd])` elsewhere), not
 inference from the real command's failure afterward. Inferring from failure is the trap:
 checking `err.code === "ENOENT"` on an `execSync` failure looks reasonable but is
 **unreliable on Windows** — `execSync` always runs through a shell (`cmd.exe` there), and

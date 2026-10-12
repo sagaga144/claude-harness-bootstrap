@@ -3,7 +3,7 @@
 // keys/tokens and blocks staged .env files. Override: start the session with
 // ALLOW_SECRET_COMMIT=1. Exit 0 = allow, 2 = block. Fails open on its own errors.
 "use strict";
-const { execSync } = require("child_process");
+const { execFileSync } = require("child_process");
 const SECRETS = [
   [/\b(?:sk|rk)_live_[0-9a-zA-Z]{10,}/, "live payment-provider secret key"],
   [/\b(?:sk|rk)_test_[0-9a-zA-Z]{10,}/, "test payment-provider secret key"],
@@ -16,7 +16,7 @@ const SECRETS = [
   [/\b(?:api[_-]?key|secret|password|passwd|token|jwt[_-]?secret)\b\s*[:=]\s*["'][^"'\s]{12,}["']/i, "hard-coded credential"],
 ];
 function git(root, args) {
-  return execSync(`git ${args}`, { cwd: root, stdio: ["ignore", "pipe", "pipe"], encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+  return execFileSync("git", args, { cwd: root, stdio: ["ignore", "pipe", "pipe"], encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
 }
 try {
   if (process.env.ALLOW_SECRET_COMMIT === "1") process.exit(0);
@@ -25,14 +25,14 @@ try {
   if (!/\bgit\b[^;&|]*\bcommit\b/i.test(cmd)) process.exit(0);
   const root = process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd();
 
-  const names = git(root, "diff --cached --name-only").split(/\r?\n/).filter(Boolean);
+  const names = git(root, ["diff", "--cached", "--name-only"]).split(/\r?\n/).filter(Boolean);
   const envFile = names.find((n) => /(?:^|\/)\.env(?:\.(?!example$)[\w.-]+)?$/i.test(n));
   if (envFile) {
     console.error(`Blocked: ${envFile} is staged. Secrets files never get committed; unstage it (git restore --staged ${envFile}) and keep only .env.example in git.`);
     process.exit(2);
   }
 
-  const diff = git(root, "diff --cached -U0 --no-color");
+  const diff = git(root, ["diff", "--cached", "-U0", "--no-color"]);
   let file = "";
   for (const line of diff.split(/\r?\n/)) {
     if (line.startsWith("+++ ")) { file = line.slice(6); continue; }

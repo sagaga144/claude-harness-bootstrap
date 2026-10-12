@@ -19,3 +19,9 @@ run's local hook-test fixtures). Attack suite on this harness: 13 of 13 attacks 
 counting permission rules, 8 of 13 by hooks alone, the same from a subfolder
 ([matrix](../../docs/baselines/hooks-v0.7.0.md)). The v0.5.0 harness this replaces
 blocked 0 of 13 by hooks.
+
+**Edited after generation (2026-10-12):** `.claude/hooks/build-gate.cjs` ran child processes through shell command
+strings built with template literals, which security scanners flag as shell injection.
+It now passes arguments as a list without a shell (`execFileSync`/`spawnSync`); behavior
+is unchanged and was re-tested. The spec was fixed in the same change
+(`HARNESS_REFERENCE.md` §1.8), so newly generated harnesses don't do this.
