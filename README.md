@@ -14,8 +14,13 @@ setup: `CLAUDE.md`, guard hooks, reviewer agents and slash commands.
 ## Quickstart
 
 **Listed in Anthropic's plugin directory** for Claude Code, Cowork and Claude apps, after
-Anthropic's security scan and review. In Claude Code, open `/plugin`, find
-**harness-bootstrap** in the directory and install it.
+Anthropic's security scan and review. In Claude Code:
+
+```
+/plugin install harness-bootstrap@anthropic-plugin-directory
+```
+
+or open `/plugin` and find **harness-bootstrap** in the directory.
 
 Or install it straight from this repository:
 
