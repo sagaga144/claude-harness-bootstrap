@@ -115,6 +115,12 @@ treat it as a hard gate before Step 2, on par with Step 0's check.
 Skip a question only when the description (or an existing harness found in Step 0)
 already makes that specific answer obvious — don't ask what's already been told to you.
 
+The gate is "asked or answered", not "wait forever": if no answer can come (a
+non-interactive session, the question tool errors or returns nothing), take the
+description's answer where it gives one, else the recommended default, say so in one
+line, and carry on through the rest of the setup, to the commit, in the same turn. Ending
+the turn with nothing written is the one outcome this gate must never cause.
+
 ### Profile the project
 
 Once the guided pair is settled, determine the rest before writing anything:
