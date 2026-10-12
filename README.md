@@ -220,8 +220,9 @@ Edit those files to change what gets built.
 
 ## What it runs and sends
 
-The plugin itself is instructions: three Markdown files in `plugin/skills/init/`, a
-manifest, an icon and the eval cases. Installing it or loading the skill runs no hooks,
+The plugin itself is instructions: three Markdown files in `plugin/skills/init/` (the hook
+code in them is reference text for Claude to adapt, not something the plugin runs), a
+manifest, an icon, a license, a security policy and the eval cases. Installing it or loading the skill runs no hooks,
 MCP servers, scripts or binaries. It reads no credentials or environment variables and
 makes no network calls of its own.
 

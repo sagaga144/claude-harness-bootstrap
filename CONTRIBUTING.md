@@ -57,11 +57,21 @@ per-case runner avoids starting over:
 ```bash
 node scripts/run-evals.mjs               # every case, with and without the plugin
 node scripts/run-evals.mjs --only-with   # skip the baseline while iterating (about half the usage)
+node scripts/run-evals.mjs --release     # Haiku and Sonnet, with the plugin only: the per-release run
+node scripts/run-evals.mjs --model haiku --runs 3   # one model, three runs per case
 ```
 
 It runs each case as its own command, waits and retries only a case that was cut off by a
 usage limit or a dropped connection, and skips cases already recorded for the current
-commit. The merged table is written to `evals-run/<commit>/SUMMARY.md`.
+commit. The merged table, one column per model, is written to
+`evals-run/<commit>/SUMMARY.md`.
+
+The hook attack suite needs no model calls and runs in seconds:
+
+```bash
+node scripts/test-hooks.mjs          # every example harness
+node scripts/check-reference.mjs     # the reference hooks, straight from the spec
+```
 
 If you change trigger wording in `SKILL.md`, re-run at least
 `self-triggers-on-bare-description`. It exists because the skill once failed to trigger
