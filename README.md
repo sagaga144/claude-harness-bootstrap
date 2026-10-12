@@ -4,6 +4,7 @@
 [![Latest release](https://img.shields.io/github/v/release/sagaga144/claude-harness-bootstrap)](https://github.com/sagaga144/claude-harness-bootstrap/releases)
 [![evals: 9/12 on Haiku and Sonnet](https://img.shields.io/badge/evals-9%2F12%20on%20Haiku%20%26%20Sonnet-yellow.svg)](#tested-not-just-prompted)
 [![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-d97757.svg)](https://claude.com/claude-code)
+[![In Anthropic's plugin directory](https://img.shields.io/badge/Anthropic%20plugin%20directory-listed-d97757.svg)](#quickstart)
 
 Describe your project in one paragraph. Get a complete, project-specific Claude Code
 setup: `CLAUDE.md`, guard hooks, reviewer agents and slash commands.
@@ -12,12 +13,19 @@ setup: `CLAUDE.md`, guard hooks, reviewer agents and slash commands.
 
 ## Quickstart
 
-In Claude Code:
+**Listed in Anthropic's plugin directory** for Claude Code, Cowork and Claude apps, after
+Anthropic's security scan and review. In Claude Code, open `/plugin`, find
+**harness-bootstrap** in the directory and install it.
+
+Or install it straight from this repository:
 
 ```
 /plugin marketplace add sagaga144/claude-harness-bootstrap
 /plugin install harness-bootstrap@harness-bootstrap
 ```
+
+The directory updates after each release passes Anthropic's review, so it can trail this
+repository by a version.
 
 Then, in any project folder (empty or existing):
 
