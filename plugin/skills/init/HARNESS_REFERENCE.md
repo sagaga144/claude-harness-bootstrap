@@ -14,7 +14,7 @@
 
 ## Part 1 — Build the complete harness
 
-A "complete" harness is five kinds of file working together, all under `.claude/`, wired through one `settings.json`. Build in this order — each layer depends on the one before it.
+A "complete" harness is five kinds of file working together, all under `.claude/`, wired through one `settings.json`. Design in this order — each layer depends on the one before it. (Writing is a different order: `CLAUDE.md` first, then `settings.json`, then the rest; see `BOOTSTRAP.md` steps 2 and 3.)
 
 ### 1.1 Directory layout
 

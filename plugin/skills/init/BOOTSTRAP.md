@@ -33,7 +33,10 @@
 3. **Build the `.claude/` harness** — hand off to `HARNESS_REFERENCE.md` Part 1,
    using the profile from Step 1 to pick real hooks/agents/commands for *this* project,
    not the web-app examples shown there (those are illustrations of the pattern, not a
-   fixed list).
+   fixed list). Design the pieces in Part 1's order, but **write `.claude/settings.json`
+   first** of the `.claude/` files: it carries the security baseline (permission rules,
+   sandbox, hook wiring), so if the user only lets one file through, it should be that
+   one. Then hooks, agents, rules, commands and skills.
 4. **Verify** every hook and `settings.json` per `HARNESS_REFERENCE.md` §1.8, then run
    Step 3's consistency check so `CLAUDE.md` only describes files that exist.
 5. **Publish the Operator's Manual** per `HARNESS_REFERENCE.md` Part 2, once the
