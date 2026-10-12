@@ -36,7 +36,8 @@
    fixed list). Design the pieces in Part 1's order, but **write `.claude/settings.json`
    first** of the `.claude/` files: it carries the security baseline (permission rules,
    sandbox, hook wiring), so if the user only lets one file through, it should be that
-   one. Then hooks, agents, rules, commands and skills.
+   one. Then the guard hooks (§1.2.1: the harness, push and remote-exec guards), then the
+   other hooks, agents, rules, commands and skills.
 4. **Verify** every hook and `settings.json` per `HARNESS_REFERENCE.md` §1.8, then run
    Step 3's consistency check so `CLAUDE.md` only describes files that exist.
 5. **Publish the Operator's Manual** per `HARNESS_REFERENCE.md` Part 2, once the
@@ -337,9 +338,13 @@ Hand off to `HARNESS_REFERENCE.md`:
 - **Part 2** — once the harness has run for at least one real session, publish the
   Operator's Manual artifact (real inventory counts, not estimates).
 
-**If a write into `.claude/` is refused, the setup still finishes.** A refusal ends the
-`.claude/` writes (don't keep retrying them or look for another way in), not the setup:
-write whatever is left outside `.claude/` (`CLAUDE.md`, `.gitignore`), run the
+**If a write into `.claude/` is refused, the setup still finishes.** A refusal is about
+that file: never retry it or look for another way to write it (a shell command, another
+path). The security baseline (`settings.json` and each guard hook) is still attempted
+once per file, because the user may refuse one file and allow another, and those are
+the files whose absence makes the harness unsafe rather than just smaller. Once a
+refusal has happened, stop there: don't attempt the remaining agents, rules, commands
+or skills. Write whatever is left outside `.claude/` (`CLAUDE.md`, `.gitignore`), run the
 consistency check below, and close with the report. Never end the turn with nothing
 written and nothing reported.
 
