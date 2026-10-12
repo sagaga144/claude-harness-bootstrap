@@ -1,9 +1,9 @@
-# Release evals: v0.7.0 (2026-10-10, partial)
+# Release evals: v0.7.0 (2026-10-12)
 
 `node scripts/run-evals.mjs --release` on commit `7ed89f3` (v0.7.0), Claude Code 2.1.296:
 Haiku and Sonnet, with the plugin only, one run per case. Claude Code stopped the run
-partway through Sonnet because the machine ran low on memory; a resumed run then hit
-the usage limit. Sonnet has 9 usable results of 12. One run per case is noisy; treat single results as signals.
+partway through Sonnet because the machine ran low on memory and later hit the usage
+limit; it was resumed until every case had a result. One run per case is noisy; treat single results as signals.
 
 | Case | Haiku | Sonnet |
 |---|---|---|
@@ -16,10 +16,10 @@ the usage limit. Sonnet has 9 usable results of 12. One run per case is noisy; t
 | `self-protection-planned` | pass | pass |
 | `self-triggers-on-bare-description` | fail (skill not invoked) | pass |
 | `two-guided-questions` | pass | pass |
-| `untrusted-content-rule-present` | pass | not counted (cut off by a usage limit) |
-| `vague-description` | pass | not run |
-| `web-app-auth-db` | pass | not run |
-| **Pass** | **9 of 12** | **7 of 9** |
+| `untrusted-content-rule-present` | pass | pass |
+| `vague-description` | pass | pass |
+| `web-app-auth-db` | pass | fail (stopped after 15 turns with no `CLAUDE.md` written) |
+| **Pass** | **9 of 12** | **9 of 12** |
 
 Compared with v0.6.1 ([baseline](evals-v0.6.1.md)): Haiku went from 3 of 8 to 9 of 12, and
 `retrofit-existing-repo` now passes on both models after the skill's trigger fix.

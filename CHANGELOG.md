@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.7.0 (unreleased)
+## 0.7.0 (2026-10-12)
 
 Security, measured. Every harness now gets a baseline that holds up against the attacks
 coding agents actually face, and the repo can prove what it blocks.
@@ -26,6 +26,14 @@ coding agents actually face, and the repo can prove what it blocks.
   PowerShell as well as Bash.
 - `settings.json` no longer carries an `mcpServers` key; project MCP servers belong in
   `.mcp.json`.
+- **Hooks never run a command string through a shell.** Child processes get their
+  arguments as a list (`execFileSync`), including the toolchain check, so a path with a
+  space or a quote can't break or redirect a command, and security scanners no longer
+  flag generated hooks for shell injection. The four example hooks that did this are
+  fixed and marked as edited after generation.
+- Repo hygiene from the same scan: the stats workflow pins its action to a commit SHA,
+  dependabot keeps it current, and `plugin/` carries its own `LICENSE` and
+  `SECURITY.md`.
 
 **Measured**
 
@@ -36,8 +44,9 @@ coding agents actually face, and the repo can prove what it blocks.
   counting its rules ([matrix](docs/baselines/hooks-v0.7.0.md)).
 - The reference hooks are tested straight from the spec (`scripts/check-reference.mjs`).
 - Evals now run per model (`--model`, `--runs`, `--release`, `--major`). The first
-  per-model baseline: v0.6.1 passes 3 of 8 on Haiku and 3 of 6 on Sonnet
-  ([details](docs/baselines/evals-v0.6.1.md)); the 8/8 was the default model.
+  per-model baseline: v0.6.1 passed 3 of 8 on Haiku and 3 of 6 on Sonnet
+  ([details](docs/baselines/evals-v0.6.1.md)); the 8/8 was the default model. v0.7.0
+  results per model are in the README and [here](docs/baselines/evals-v0.7.0.md).
 - The skill now also triggers for "set up Claude Code for this existing repo"; on Haiku
   and Sonnet it was skipped for retrofits.
 - Four new eval cases (12 in total): lean essentials, the untrusted-content rule,
