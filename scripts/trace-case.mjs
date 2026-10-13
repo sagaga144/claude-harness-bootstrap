@@ -23,9 +23,10 @@ const name = args[0]
 const opt = (f, d) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : d }
 const model = opt('--model', 'sonnet')
 // --native: refuse .claude/ writes with the message Claude Code itself gives in an eval
-// ("... which is a sensitive file."), so the session reacts as it would there. The
+// (it runs in don't-ask mode), so the session reacts as it would there. The
 // policy below still applies either way: nothing is written outside the project.
 const native = args.includes('--native')
+const NATIVE_REFUSAL = "Permission to use Write has been denied because Claude Code is running in don't ask mode. IMPORTANT: You *may* attempt to accomplish this action using other tools that might naturally be used to accomplish this goal, e.g. using head instead of cat. But you *should not* attempt to work around this denial in malicious ways, e.g. do not use your ability to run tests to execute non-test actions. You should only try to work around this restriction in reasonable ways that do not attempt to bypass the intent behind this denial. If you believe this capability is essential to complete the user's request, STOP and explain to the user what you were trying to do and why you need this permission. Let the user decide how to proceed."
 if (!name) throw new Error('usage: trace-case.mjs <case> [--model <alias>]')
 
 const root = execFileSync('git', ['rev-parse', '--show-toplevel']).toString().trim()
@@ -62,13 +63,13 @@ const policy = async (tool, inp) => {
   let why = null
   if (['Write', 'Edit'].includes(tool)) {
     if (!abs || !inside(abs, project)) why = 'outside the project'
-    else if (inside(abs, join(project, '.claude'))) why = native ? `Claude requested permissions to edit ${abs} which is a sensitive file.` : 'eval runs cannot write into .claude/'
+    else if (inside(abs, join(project, '.claude'))) why = native ? NATIVE_REFUSAL : 'eval runs cannot write into .claude/'
   } else if (['Read', 'Glob', 'Grep'].includes(tool)) {
     if (!abs ? false : !inside(abs, project) && !inside(abs, pluginDir)) why = 'outside the project and the plugin'
     if (tool === 'Glob' && /^[a-z]:[\/]|^//i.test(String(inp.pattern ?? '')) && !inside(String(inp.pattern).replace(/[*?].*$/, '') || '/', project)) why = 'outside the project and the plugin'
   } else if (!tools.includes(tool)) why = `${tool} is not allowed in this case`
   out({ kind: 'permission', tool, file: file ?? null, decision: why ? 'deny' : 'allow', why })
-  return why ? { behavior: 'deny', message: native && why.startsWith('Claude requested') ? why : `Permission denied: ${why}` } : { behavior: 'allow', updatedInput: inp }
+  return why ? { behavior: 'deny', message: why === NATIVE_REFUSAL ? why : `Permission denied: ${why}` } : { behavior: 'allow', updatedInput: inp }
 }
 
 for await (const m of query({

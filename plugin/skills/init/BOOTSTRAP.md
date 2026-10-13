@@ -342,7 +342,10 @@ Hand off to `HARNESS_REFERENCE.md`:
 that file: never retry it or look for another way to write it (a shell command, another
 path). The security baseline (`settings.json` and each guard hook) is still attempted
 once per file, because the user may refuse one file and allow another, and those are
-the files whose absence makes the harness unsafe rather than just smaller. Once a
+the files whose absence makes the harness unsafe rather than just smaller. Do this even
+when the refusal sounds session-wide (e.g. "running in don't ask mode"): permission
+rules are per path, so a different file may still be allowed, and trying a different
+file is not routing around a refusal. Once a
 refusal has happened, stop there: don't attempt the remaining agents, rules, commands
 or skills. Write whatever is left outside `.claude/` (`CLAUDE.md`, `.gitignore`), run the
 consistency check below, and close with the report. Never end the turn with nothing
