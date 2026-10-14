@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/sagaga144/claude-harness-bootstrap)](https://github.com/sagaga144/claude-harness-bootstrap/releases)
-[![evals: 9/12 on Haiku and Sonnet](https://img.shields.io/badge/evals-9%2F12%20on%20Haiku%20%26%20Sonnet-yellow.svg)](#tested-not-just-prompted)
+[![evals: 12/12 on Haiku and Sonnet](https://img.shields.io/badge/evals-12%2F12%20on%20Haiku%20%26%20Sonnet-brightgreen.svg)](#tested-not-just-prompted)
 [![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-d97757.svg)](https://claude.com/claude-code)
 [![In Anthropic's plugin directory](https://img.shields.io/badge/Anthropic%20plugin%20directory-listed-d97757.svg)](#quickstart)
 
@@ -98,32 +98,34 @@ The plugin ships with an eval suite in [`plugin/evals/`](plugin/evals/). Each ca
 real Claude Code session that gets a project description, with graders that check what
 came out, and can also run once without the plugin, for comparison.
 
-**Latest result (v0.7.0, Claude Code 2.1.296, 2026-10-12): 9 of 12 on Haiku, 9 of 12 on
-Sonnet**, one run per case, with the plugin. v0.6.1 passed 3 of 8 on Haiku and 3 of 6 on
-Sonnet in the same setup; the 8 of 8 it reported was the account's default model. Eval runs
+**Latest result (v0.7.1, Claude Code 2.1.299, 2026-10-14): 12 of 12 on Haiku, 12 of 12 on
+Sonnet**, one run per case, with the plugin. v0.7.0 passed 9 of 12 on each; v0.6.1 passed
+3 of 8 on Haiku and 3 of 6 on Sonnet in the same setup (the 8 of 8 it reported was the
+account's default model). Eval runs
 can't write into `.claude/`, so graders check `CLAUDE.md` and what the session tried to
 write, and the generated hooks are tested separately (see [What it blocks](#what-it-blocks)).
 
 | Case | What it checks | Haiku | Sonnet |
 |---|---|---|---|
-| `self-triggers-on-bare-description` | A plain project description, with no mention of Claude Code or setup, is enough to start it. | fail | pass |
+| `self-triggers-on-bare-description` | A plain project description, with no mention of Claude Code or setup, is enough to start it. | pass | pass |
 | `two-guided-questions` | The two setup questions (cost, scope) actually get asked. | pass | pass |
-| `web-app-auth-db` | An authenticated web app with a database plans a security reviewer and a data-layer guard, a secret scan, and no semver reviewer. | pass | fail |
+| `web-app-auth-db` | An authenticated web app with a database plans a security reviewer and a data-layer guard, a secret scan, and no semver reviewer. | pass | pass |
 | `published-library-semver` | A library published to PyPI gets a semver / breaking-change reviewer and a lean, placeholder-free `CLAUDE.md`. | pass | pass |
 | `vague-description` | "I want to build an app" gets one question and a stack-neutral harness, not a guessed stack. | pass | pass |
-| `cli-no-ui-no-persistence` | A local-files CLI gets no UI reviewer or persistence guard, dev commands match its toolchain, and `CLAUDE.md` stays lean. | pass | fail |
+| `cli-no-ui-no-persistence` | A local-files CLI gets no UI reviewer or persistence guard, dev commands match its toolchain, and `CLAUDE.md` stays lean. | pass | pass |
 | `retrofit-existing-repo` | On a repo with a harness already in place, it keeps the existing agent and `CLAUDE.md` and follows the repo's own conventions. | pass | pass |
-| `cost-low-caps-models` | Asking to keep cost low means no agent runs on Opus. | fail | fail |
+| `cost-low-caps-models` | Asking to keep cost low means no agent runs on Opus. | pass | pass |
 | `essentials-tier-is-lean` | "Just the essentials" stays within 3 agents, 8 hooks and 200 lines of `CLAUDE.md`. | pass | pass |
 | `untrusted-content-rule-present` | `CLAUDE.md` treats text from outside the user as data, not instructions. | pass | pass |
 | `self-protection-planned` | The harness's own files are under `ask` rules, with a shell guard and anchored hook paths. | pass | pass |
-| `sandbox-recommended` | The sandbox is turned on, and `CLAUDE.md` says how it applies on this platform. | fail | pass |
+| `sandbox-recommended` | The sandbox is turned on, and `CLAUDE.md` says how it applies on this platform. | pass | pass |
 
-**What's still failing, and why.** Most of the misses share one cause: in an eval no one
-can answer the two setup questions, and smaller models sometimes ask and then stop
-without writing anything (`web-app-auth-db` on Sonnet ended with no `CLAUDE.md`). The fix,
-taking the recommended answer when no reply can come, is the next change on the list.
-Per-case details: [`docs/baselines/evals-v0.7.0.md`](docs/baselines/evals-v0.7.0.md).
+**What changed since v0.7.0.** Most misses came from how the setup reacted when it
+couldn't write into `.claude/`, which no eval run can: some sessions stopped before
+writing `CLAUDE.md`, or skipped the guard hooks after the first refusal. 0.7.1 writes
+`CLAUDE.md` first, still tries each security file, and finishes with a report of what's
+missing. One grader changed (`published-library-semver` now reads the closing report).
+Per-case details: [`docs/baselines/evals-v0.7.1.md`](docs/baselines/evals-v0.7.1.md).
 
 Each case was run as its own command on the same commit, using
 [`scripts/run-evals.mjs`](scripts/run-evals.mjs), so a usage limit can't cut a run short.

@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.7.1 (2026-10-14)
+
+A setup finishes, and protects itself, even when it can't write everything. **12 of 12 on
+Haiku and 12 of 12 on Sonnet** (v0.7.0: 9 and 9).
+
+- **The setup never ends with nothing written.** `CLAUDE.md` is written before any file
+  under `.claude/`, since writes there need permission and may be refused, and it's the
+  one file that's useful on its own. Then `settings.json`, which carries the security
+  baseline, then the guard hooks, then the rest.
+- **A refused write blocks that file, not the setup.** `settings.json` and each guard
+  hook are still tried once after a refusal, even one that sounds session-wide ("running
+  in don't ask mode"): permission rules are per path, so the next file may be allowed.
+  The optional agents, commands and skills stop at the first refusal. The closing report
+  names every planned file that wasn't written, with the model each agent would run on.
+  `CLAUDE.md` describes only files that exist.
+- **The setup questions never stall.** When no one can answer, the setup takes the
+  recommended answers and says so.
+- **The skill starts before any code.** Its description now says to use it before
+  writing code, scaffolding files or checking toolchains. On a bare project description
+  Haiku sometimes started building instead; it now triggers first.
+- A project name the setup picked is used in paths too (`src/csvtool/`, never
+  `src/<pkg>/`).
+- The README lists harness-bootstrap in Anthropic's plugin directory, with the install
+  command.
+
+**Measured**
+
+- Evals: [details](docs/baselines/evals-v0.7.1.md). One grader changed:
+  `published-library-semver` now looks for "semver" or "semantic versioning" in the
+  closing report instead of `CLAUDE.md`. Since `CLAUDE.md` lists only files that exist,
+  a semver reviewer that couldn't be written (as in every eval run) is named in the
+  report.
+- `run-evals.mjs`: a case that fails only on LLM-judged graders runs twice more and counts
+  on a majority, shown as a rate (none needed it in this release); `--keep-temp` keeps
+  each session's files. `scripts/trace-case.mjs` re-runs one case with the eval's exact
+  refusal message and logs the whole session.
+- The attack suite is unchanged from v0.7.0: the reference hooks block 8 of 13 attacks,
+  13 of 13 counting permission rules.
+
 ## 0.7.0 (2026-10-12)
 
 Security, measured. Every harness now gets a baseline that holds up against the attacks
