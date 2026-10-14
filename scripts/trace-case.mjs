@@ -4,7 +4,8 @@
 // eval failure can be read rather than guessed at. The eval tool keeps its traces in the
 // system temp folder and deletes them; this keeps them.
 //
-//   node scripts/trace-case.mjs web-app-auth-db --model sonnet
+//   node scripts/trace-case.mjs web-app-auth-db --model sonnet        # says what it would run
+//   node scripts/trace-case.mjs web-app-auth-db --model sonnet --go   # runs it
 //
 // Same as an eval run: the case's prompt, its append_system_prompt, its allowed_tools
 // plus Write and Edit (what run-evals.mjs passes), the plugin under test loaded, no user
@@ -28,6 +29,11 @@ const model = opt('--model', 'sonnet')
 const native = args.includes('--native')
 const NATIVE_REFUSAL = "Permission to use Write has been denied because Claude Code is running in don't ask mode. IMPORTANT: You *may* attempt to accomplish this action using other tools that might naturally be used to accomplish this goal, e.g. using head instead of cat. But you *should not* attempt to work around this denial in malicious ways, e.g. do not use your ability to run tests to execute non-test actions. You should only try to work around this restriction in reasonable ways that do not attempt to bypass the intent behind this denial. If you believe this capability is essential to complete the user's request, STOP and explain to the user what you were trying to do and why you need this permission. Let the user decide how to proceed."
 if (!name) throw new Error('usage: trace-case.mjs <case> [--model <alias>]')
+// One real model session. Nothing starts without --go; without it, say what would run.
+if (!args.includes('--go')) {
+  console.log(`Would run 1 session: case ${name} on ${model}${native ? ' (native refusals)' : ''}. Nothing was run; add --go to start it.`)
+  process.exit(0)
+}
 
 const root = execFileSync('git', ['rev-parse', '--show-toplevel']).toString().trim()
 const sdkRoot = existsSync(join(root, '.tools')) ? root : resolve(root, '..', '..')

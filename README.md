@@ -140,8 +140,9 @@ claude plugin eval ./plugin --scaffold --allow-tools Write Edit
 
 `--scaffold` lets `retrofit-existing-repo` build its fixture repo, and
 `--allow-tools Write Edit` lets runs write the `CLAUDE.md` the graders check. Each case is
-a full session on your own account. On a subscription, `node scripts/run-evals.mjs` runs
-the cases one by one and retries any that hit a usage limit. More in
+a full session on your own account. On a subscription, `node scripts/run-evals.mjs --go`
+runs the cases one by one and retries any that hit a usage limit; without `--go` it only
+lists what it would run. More in
 [CONTRIBUTING.md](CONTRIBUTING.md#run-the-evals).
 
 **What it caught.** The README always said you could just describe a project. The first

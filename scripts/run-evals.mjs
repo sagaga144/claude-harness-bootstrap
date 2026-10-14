@@ -2,6 +2,11 @@
 // Runs the plugin eval suite one case at a time, so a subscription usage limit
 // only costs a retry of the case it interrupted, not the whole suite.
 //
+// Nothing runs without --go. Without it the script only lists the sessions it would start
+// (and rebuilds SUMMARY.md from what's recorded), so a run's size is seen before it's spent.
+//
+//   node scripts/run-evals.mjs --release                 # list what a release run would start
+//   node scripts/run-evals.mjs --release --go            # start it
 //   node scripts/run-evals.mjs                 # every case, with and without the plugin
 //   node scripts/run-evals.mjs --only-with     # skip the no-plugin baseline (about half the usage)
 //   node scripts/run-evals.mjs --case web-app-auth-db --case vague-description
@@ -10,14 +15,13 @@
 //   node scripts/run-evals.mjs --major         # Haiku, Sonnet, Opus, Fable; both arms; 3 runs each
 //   node scripts/run-evals.mjs --heldout C:/path/to/heldout-evals --model sonnet --runs 3
 //   node scripts/run-evals.mjs --wait-min 20 --max-tries 12
-//   node scripts/run-evals.mjs --model haiku --model sonnet --model opus --runs 1 --reuse e117b17
-//                                              # reuse another commit's results if plugin/ is identical;
-//                                              # a case with only a with-plugin result gets its no-plugin arm run alone
-//   node scripts/run-evals.mjs --release --keep-temp   # keep each session's files and trace
-//                                                      # (in TEMP: point it somewhere readable)
+//   node scripts/run-evals.mjs --release --keep-temp --temp C:/path/eval-tmp
+//                                              # keep each session's files and trace, in that folder
 //
-// Results: evals-run/<commit>/<model>/<case>.json plus evals-run/<commit>/SUMMARY.md,
-// with one column per model. A case already recorded for this commit and model
+// Results: evals-run/plugin-<tree>/<model>/<case>.json plus SUMMARY.md there, where <tree>
+// is the git hash of the plugin/ folder: a commit that only touches docs or scripts keeps
+// the same folder, so nothing is run twice for the same plugin. A case already recorded
+// for this plugin and model
 // without errors is skipped, so re-running after an interruption picks up where it
 // left off. With no --model, the account's default model runs, filed under "default".
 
@@ -41,12 +45,18 @@ const preset = flag('--major') ? { models: ['haiku', 'sonnet', 'opus', 'fable'],
 const models = many('--model').length > 0 ? many('--model') : preset.models.length > 0 ? preset.models : ['default'];
 const onlyWith = flag('--only-with') || preset.onlyWith;
 const keepTemp = flag('--keep-temp');
+const go = flag('--go');
+// --temp <dir>: where the eval keeps its session folders (TEMP/TMP for the child), so a
+// kept trace can be read without leaving the allowed folders.
+const tempDir = opt('--temp');
+let planned = 0;
 const runs = opt('--runs', preset.runs);
 
 const git = (...a) => execFileSync('git', a).toString().trim();
 const root = git('rev-parse', '--show-toplevel');
 const commit = git('rev-parse', '--short', 'HEAD');
 const dirty = git('status', '--porcelain', '--', 'plugin') !== '';
+const pluginTree = git('rev-parse', '--short', 'HEAD:plugin');
 
 // On Windows, npm installs claude as a .cmd shim, which Node can only start through a
 // shell. Find the executable the shim wraps and run that instead, so the eval arguments
@@ -66,7 +76,7 @@ const claude = claudeBin();
 // inside <dir>, and keep their results there too. Nothing about them lands in this repo,
 // where the improvement loop's sessions could read it.
 const heldout = opt('--heldout');
-const tag = commit + (dirty ? '-dirty' : '');
+const tag = `plugin-${pluginTree}${dirty ? `-dirty-${commit}` : ''}`;
 const outRoot = heldout ? join(heldout, 'results', tag) : join(root, 'evals-run', tag);
 const evalRoot = heldout ? join(heldout, 'runs', tag) : root;
 if (heldout) {
@@ -101,6 +111,11 @@ const sleep = (min) => new Promise((res) => setTimeout(res, min * 60_000));
 // One case, retried only when a usage limit or a dropped connection cut it off.
 // `target` is the plugin to load; `oneArm` runs it alone, with no comparison arm.
 async function runCase(model, c, file, runCount, target = './plugin', oneArm = onlyWith) {
+  if (!go) {
+    planned += Number(runCount ?? 1) * (oneArm ? 1 : 2);
+    console.log(`would run: ${model} ${c}${target === './plugin' ? (oneArm ? ' (with the plugin)' : ' (with and without the plugin)') : ' (without the plugin)'}${runCount ? `, ${runCount} run(s)` : ''}`);
+    return;
+  }
   for (let attempt = 1; attempt <= maxTries; attempt++) {
     console.log(`> ${model} ${c}${target === './plugin' ? '' : ' (without the plugin)'}: attempt ${attempt}${runCount ? ` (${runCount} runs)` : ''}`);
     const cmd = ['plugin', 'eval', target, ...(heldout ? ['--eval-dir', 'heldout'] : []), '--case', c, '--scaffold', '--allow-tools', 'Write', 'Edit',
@@ -109,7 +124,9 @@ async function runCase(model, c, file, runCount, target = './plugin', oneArm = o
       ...(runCount ? ['--runs', String(runCount)] : []),
       ...(oneArm ? ['--ablation', 'none'] : []),
       ...(keepTemp ? ['--keep-temp'] : [])];
-    spawnSync(claude.bin, cmd, { cwd: evalRoot, stdio: ['ignore', 'ignore', 'inherit'], shell: claude.shell });
+    const env = tempDir ? { ...process.env, TEMP: tempDir, TMP: tempDir } : process.env;
+    if (tempDir) mkdirSync(tempDir, { recursive: true });
+    spawnSync(claude.bin, cmd, { cwd: evalRoot, env, stdio: ['ignore', 'ignore', 'inherit'], shell: claude.shell });
     const why = existsSync(file) ? interruption(JSON.parse(readFileSync(file, 'utf8'))) : 'no result written';
     if (!why) { console.log(`  recorded`); return; }
     console.log(`  interrupted (${why.slice(0, 80)}); waiting ${waitMin} min`);
@@ -127,25 +144,6 @@ function judgeOnlyFailure(res) {
   const llm = new Set((k.graders ?? []).filter((g) => g.type === 'llm').map((g) => g.name));
   const failed = (k.arms?.with ?? []).flatMap((r) => (r.graders ?? []).filter((g) => !g.passed).map((g) => g.name));
   return failed.length > 0 && failed.every((name) => llm.has(name));
-}
-
-// --reuse <commit>: take the results already recorded for another commit, but only when
-// its plugin/ folder is identical to this one (a docs-only commit since then, say), so a
-// result is never counted for a plugin it didn't test.
-const reuse = opt('--reuse');
-if (reuse) {
-  try { execFileSync('git', ['diff', '--quiet', reuse, '--', 'plugin']); } catch {
-    throw new Error(`--reuse ${reuse}: its plugin/ folder differs from this checkout's, so its results don't apply here`);
-  }
-  if (dirty) throw new Error('--reuse: plugin/ has uncommitted changes');
-  for (const model of models) {
-    const from = join(root, 'evals-run', reuse, model);
-    if (!existsSync(from)) continue;
-    mkdirSync(join(outRoot, model), { recursive: true });
-    for (const f of readdirSync(from)) {
-      if (!existsSync(join(outRoot, model, f))) { cpSync(join(from, f), join(outRoot, model, f)); console.log(`= ${model} ${f}: reused from ${reuse}`); }
-    }
-  }
 }
 
 // The no-plugin arm on its own, for a case whose with-plugin result is already recorded
@@ -168,7 +166,7 @@ for (const model of models) {
   for (const c of cases) {
     const file = join(outDir, `${c}.json`);
     if (existsSync(file) && !interruption(JSON.parse(readFileSync(file, 'utf8')))) {
-      console.log(`= ${model} ${c}: already recorded for ${commit}, skipping`);
+      console.log(`= ${model} ${c}: already recorded for plugin ${pluginTree}, skipping`);
     } else {
       await runCase(model, c, file, runs);
     }
@@ -220,9 +218,9 @@ for (const c of cases) {
   }
   rows.push(`| \`${c}\` | ${cells.join(' | ')} |`);
 }
-const summary = `# Eval results for ${commit}${dirty ? ' (uncommitted plugin changes)' : ''}
+const summary = `# Eval results for plugin ${pluginTree} (commit ${commit})${dirty ? ' (uncommitted plugin changes)' : ''}
 
-Claude Code ${claudeVersion}. Each case run on its own (one command per case), all on this commit.
+Claude Code ${claudeVersion}. Each case run on its own (one command per case), all on this plugin folder.
 ${runs ? `${runs} run(s) per case; a cell like 2/3 is the pass rate.` : 'Runs per case: each case\'s default.'}
 ${onlyWith ? 'With the plugin only (no baseline arm).' : 'In parentheses: the same case without the plugin. Where the with-plugin result came first, the no-plugin arm ran on its own with a stand-in plugin that has no skills, scored like claude plugin eval scores its own (the skill-fired check left out).'}
 
@@ -238,3 +236,4 @@ ${rows.join('\n')}
 mkdirSync(outRoot, { recursive: true });
 writeFileSync(join(outRoot, 'SUMMARY.md'), summary);
 console.log('\n' + summary);
+if (!go) console.log(planned === 0 ? 'Nothing to run: every case is recorded for this plugin.' : `Dry run: ${planned} session(s) would start. Nothing was run; add --go to start them.`);

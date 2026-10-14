@@ -52,21 +52,26 @@ Each run is a full Claude Code session on your own account, so a full suite cost
 usage. Results go to `plugin/evals/results/` (gitignored).
 
 On a subscription, a full suite can run into your usage limit partway through. The
-per-case runner avoids starting over:
+per-case runner avoids starting over. It starts nothing without `--go`: without it, it lists
+the sessions it would start, so you see a run's size before you spend it.
 
 ```bash
-node scripts/run-evals.mjs               # every case, with and without the plugin
-node scripts/run-evals.mjs --only-with   # skip the baseline while iterating (about half the usage)
-node scripts/run-evals.mjs --release     # Haiku and Sonnet, with the plugin only: the per-release run
-node scripts/run-evals.mjs --model haiku --runs 3   # one model, three runs per case
+node scripts/run-evals.mjs --release          # list what the per-release run would start
+node scripts/run-evals.mjs --release --go     # Haiku and Sonnet, with the plugin only
+node scripts/run-evals.mjs --go               # every case, with and without the plugin
+node scripts/run-evals.mjs --only-with --go   # skip the baseline while iterating (about half the usage)
+node scripts/run-evals.mjs --model haiku --runs 3 --go   # one model, three runs per case
 ```
 
 It runs each case as its own command, waits and retries only a case that was cut off by a
-usage limit or a dropped connection, and skips cases already recorded for the current
-commit. A case that fails only on LLM-judged graders runs twice more and counts on a
+usage limit or a dropped connection, and skips cases already recorded for the same
+`plugin/` folder, so a commit that only changes docs or scripts never re-runs anything. A
+case that already has a with-plugin result gets only its no-plugin arm. A case that fails only on LLM-judged graders runs twice more and counts on a
 majority, shown as a rate like 2/3; a regex or tool check failing counts at once. The
 merged table, one column per model, is written to
-`evals-run/<commit>/SUMMARY.md`.
+`evals-run/plugin-<tree>/SUMMARY.md`, where `<tree>` is the git hash of `plugin/`.
+`scripts/trace-case.mjs` and `scripts/generate-example.mjs` each start one session, and
+also need `--go`.
 
 The hook attack suite needs no model calls and runs in seconds:
 

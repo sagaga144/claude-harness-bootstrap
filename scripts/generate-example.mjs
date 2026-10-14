@@ -3,7 +3,7 @@
 // real Claude Code session that can write into .claude/ (eval runs can't).
 //
 //   node scripts/generate-example.mjs monorepo-saas
-//   node scripts/generate-example.mjs monorepo-saas --model sonnet
+//   node scripts/generate-example.mjs monorepo-saas --model sonnet --go   (without --go: only says what it would run)
 //
 // Needs the Agent SDK in .tools/ (gitignored):
 //   cd .tools && npm install @anthropic-ai/claude-agent-sdk@0.3.296
@@ -24,6 +24,11 @@ const args = process.argv.slice(2)
 const name = args[0]
 const opt = (flag) => { const i = args.indexOf(flag); return i >= 0 ? args[i + 1] : undefined }
 if (!name) throw new Error('usage: generate-example.mjs <example-name> [--model <alias>]')
+// One real model session. Nothing starts without --go; without it, say what would run.
+if (!args.includes('--go')) {
+  console.log(`Would run 1 session: regenerate examples/${name} on ${opt('--model') ?? 'the default model'}. Nothing was run; add --go to start it.`)
+  process.exit(0)
+}
 
 const root = execSync('git rev-parse --show-toplevel').toString().trim()
 // In a worktree under .worktrees/, the SDK is the main checkout's .tools/.
