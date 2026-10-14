@@ -16,7 +16,7 @@
 // Output: hooks-run/gen/<name>/ plus hooks-run/gen/<name>.log (every decision).
 
 import { execSync } from 'node:child_process'
-import { appendFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { isAbsolute, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
@@ -26,7 +26,9 @@ const opt = (flag) => { const i = args.indexOf(flag); return i >= 0 ? args[i + 1
 if (!name) throw new Error('usage: generate-example.mjs <example-name> [--model <alias>]')
 
 const root = execSync('git rev-parse --show-toplevel').toString().trim()
-const { query } = await import(pathToFileURL(join(root, '.tools', 'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'sdk.mjs')).href)
+// In a worktree under .worktrees/, the SDK is the main checkout's .tools/.
+const sdkRoot = existsSync(join(root, '.tools')) ? root : resolve(root, '..', '..')
+const { query } = await import(pathToFileURL(join(sdkRoot, '.tools', 'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'sdk.mjs')).href)
 
 const input = readFileSync(join(root, 'examples', name, 'INPUT.md'), 'utf8')
 const description = input.split('\n').filter((l) => l.startsWith('> ')).map((l) => l.slice(2)).join('\n').trim()
