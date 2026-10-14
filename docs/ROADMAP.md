@@ -487,11 +487,10 @@ lines).
 - The generated `CLAUDE.md` gains one line: run `/harness-bootstrap:check` after a big
   change or a Claude Code update.
 
-**Status: done, with two gaps.** `plugin/skills/check/SKILL.md` covers checks 1 to 7 and
-tests the guards with its own payloads, including the v0.8 attacks. **Not done:** check 8
-(workarounds due for review) waits for the workaround tags, which ship in a later
-release; the `CLAUDE.md` line pointing to `/harness-bootstrap:check` is still to be added
-to the spec before release.
+**Status: done, with one gap.** `plugin/skills/check/SKILL.md` covers checks 1 to 7 and
+tests the guards with its own payloads, including the v0.8 attacks, and the generated
+`CLAUDE.md` points to it under Project-Specific Notes. **Not done:** check 8 (workarounds
+due for review) waits for the workaround tags, which ship in a later release.
 
 ### Step 2.5: A hook behind the rule-only attacks
 
@@ -552,7 +551,7 @@ comparable with earlier releases.
 **Status: in progress.** Version 0.8.0, README section "Keeping it current", the 15-attack
 matrix (`docs/baselines/hooks-v0.8.0.md`) and a CHANGELOG draft are written. The Haiku +
 Sonnet run is going, to catch problems before the major run. Left: fixes from that run,
-the `CLAUDE.md` line from Step 2.4, regenerated examples, the major run (asked first),
+regenerated examples, the major run (asked first),
 `docs/baselines/evals-v0.8.0.md`, release.
 
 **Done when:** `/harness-check` finds the planted drift in its eval fixture on Sonnet, and
