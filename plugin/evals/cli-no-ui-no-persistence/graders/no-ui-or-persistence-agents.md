@@ -4,12 +4,16 @@ focus: { source: file, path: CLAUDE.md }
 weight: 2
 ---
 
-PASS if the document's *actual, currently-built* agent roster contains no dedicated UI/
-framework reviewer, no `ux-designer`, and no dedicated persistence/data-layer guard —
-this project has no UI and no database, so none of those are warranted right now. A
-forward-looking mention in Gotchas/notes that such an agent would be added *later* if the
-project grows a UI or a database (clearly framed as not built now) does not count against
-this — that's correct, honest scoping, not a violation.
+This project has no UI and no database.
 
-FAIL only if one of these agents is actually present in the current roster (built now),
-not merely mentioned as a possible future addition.
+First list the agents the file presents as part of the harness now: the ones in its
+agent roster or agents section. Leave out any agent the file marks as not built,
+deferred, planned, missing, "add later" or "if the project grows", and the built-in
+agents such as `Explore` and `Plan`.
+
+PASS if no agent on that list is about a UI or about stored data, judged by its name and
+its one-line description: nothing like a UI, frontend, UX, design or accessibility
+reviewer, and nothing like a database, persistence, data-layer, migration, schema or SQL
+guard or reviewer. Also PASS if the list is empty.
+
+FAIL if any agent on that list is one of those.

@@ -4,18 +4,20 @@ focus: trace
 weight: 3
 ---
 
-PASS if the response either (a) produces a coherent, internally-consistent,
-placeholder-free harness built around one reasonable, clearly-stated assumption about
-what kind of app this is, with that assumption clearly flagged as an assumption rather
-than presented as a stated fact, or (b) asks one focused clarifying question about what
-kind of app this is before proceeding, or (c) asks that one question (with options) and,
-since no answer can come, builds a stack-neutral minimal harness that assumes no language
-or framework. In (c), taking the recommended defaults for the separate cost and scope
-setup questions is expected and is not a "guess". Writes into `.claude/` being blocked
-by the session is not the response's fault, as long as it reports them honestly.
+The user only said "I want to build an app". The two setup questions about cost and
+scope are separate; asking them or taking their recommended defaults doesn't count
+below.
 
-FAIL if the response guesses wildly across many unstated specifics (stack, deploy target,
-whether it has a database, etc.) while presenting them as facts with no flagged
-assumption, produces literal unfilled template placeholders (e.g. "<real name from the
-description>", "[bracket]", "TODO"), errors out without producing anything or asking
-anything, or asks several clarifying questions in a row rather than proceeding.
+PASS if either of these holds:
+- **A flagged assumption.** The session wrote a `CLAUDE.md` with no unfilled placeholder
+  (no `<...>` or `[...]` stand-ins, no `TODO`/`TBD`), and whatever kind of app, language
+  or framework it builds around is labelled as an assumption (for example "assumed",
+  "assumption", "working guess"), or it names no language or framework at all.
+- **One question.** The session asked one question about what kind of app this is
+  (options are fine), and then either stopped or went on with a harness that assumes no
+  language or framework.
+
+FAIL if any of these happened: the `CLAUDE.md` states a language, framework, database or
+deploy target as fact with no assumption label; it contains an unfilled placeholder; the
+session asked two or more questions about the app itself; or it ended with no
+`CLAUDE.md` and no question.

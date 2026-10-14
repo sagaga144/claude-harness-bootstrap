@@ -4,11 +4,15 @@ focus: { source: file, path: CLAUDE.md }
 weight: 1
 ---
 
-PASS if the document's *actual, currently-built* agent roster contains no
-`semver-reviewer` or breaking-change/API-surface reviewer — this project is an app, not a
-published library, so that role isn't warranted. A forward-looking mention in Gotchas/
-notes that such an agent would be added *later* if the project is ever published as a
-library (clearly framed as not built now) does not count against this.
+This project is an app, not a published library.
 
-FAIL only if a semver/breaking-change reviewer is actually present in the current roster
-(built now), not merely mentioned as a hypothetical future addition.
+First list the agents the file presents as part of the harness now: the ones in its
+agent roster or agents section. Leave out any agent the file marks as not built,
+deferred, planned, missing, "add later" or "if it's ever published", and the built-in
+agents such as `Explore` and `Plan`.
+
+PASS if no agent on that list is a semver, versioning, breaking-change, public-API or
+API-surface reviewer, judged by its name and its one-line description. Also PASS if the
+list is empty.
+
+FAIL if any agent on that list is one of those.

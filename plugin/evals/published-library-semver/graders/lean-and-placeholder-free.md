@@ -4,10 +4,15 @@ focus: { source: file, path: CLAUDE.md }
 weight: 1
 ---
 
-PASS if the CLAUDE.md is reasonably lean (roughly under 200 lines), contains no leftover
-template placeholders (literal bracketed text like "<real name from the description>",
-"[bracket]", "TODO", or similar unfilled-in markers), and its content is clearly specific
-to a published Python library rather than generic or web-app-shaped boilerplate.
+Check each condition. PASS only if all four hold; FAIL if any one doesn't.
 
-FAIL if the file is bloated, still contains obvious unfilled placeholder text, or
-describes a stack/commands that don't match a Python library.
+1. The file is under 200 lines.
+2. It has no unfilled placeholder: no stand-in in angle or square brackets for a value
+   the author should have filled in (such as `<pkg>`, `<project name>`, `[your stack]`),
+   and no `TODO`, `TBD` or `FIXME`. Markdown links, HTML tags and command options like
+   `--help` are not placeholders.
+3. The stack it states names Python, and the file says the package is published (to PyPI
+   or as a public library other projects depend on).
+4. Every test, lint or build command it lists is a Python-ecosystem command (for example
+   `pytest`, `ruff`, `mypy`, `python -m build`, `pip`). None is from another ecosystem,
+   such as `npm`, `cargo` or `go`.
