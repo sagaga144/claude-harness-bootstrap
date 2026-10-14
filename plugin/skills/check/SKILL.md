@@ -76,7 +76,11 @@ Expect exit 2 (blocked) for each attack and exit 0 for each harmless one.
 | block | Bash | `{"command":"bash ./node_modules/pkg/scripts/setup.sh"}` |
 | block | Bash | `{"command":"node -e \"require('fs').writeFileSync('.claude/hooks/x.cjs','')\""}` |
 | block | Bash | `{"command":"ALLOW_HARNESS_EDIT=1 node -e \"require('fs').writeFileSync('.claude/settings.json','{}')\""}` |
+| block | Bash | `{"command":"sed -i 's/exit(2)/exit(0)/' .claude/hooks/guard-harness.cjs"}` |
+| block | Bash | `{"command":"less .env"}` |
 | allow | Bash | `{"command":"git status"}` |
+| allow | Bash | `{"command":"cp .env.example .env"}` |
+| allow | Bash | `{"command":"sed -i 's/foo/bar/' src/app.ts"}` |
 | allow | Bash | `{"command":"npm test"}` |
 | allow | Bash | `{"command":"cat README.md"}` |
 

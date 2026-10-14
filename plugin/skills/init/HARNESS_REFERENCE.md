@@ -93,7 +93,7 @@ Standard hook inventory by lifecycle event:
 | `SessionStart` | inbox reader (optional) | Injects notes dropped from outside the session (e.g. a synced vault) |
 | `PreToolUse: Bash\|PowerShell` | push/deploy/release guard | Blocks `git push` (including `git -C <dir> push` and other option forms), a deploy command, or a release-publish command (`git push --tags`, `npm publish`, `cargo publish`, `goreleaser release`, `twine upload`...) unless an env override is set. Reference implementation in §1.2.1 |
 | `PreToolUse: Bash\|PowerShell` | harness guard | Blocks shell commands that change the harness's own files in ways the `ask` rules can't see. Every harness, every tier. §1.2.1 |
-| `PreToolUse: Bash\|PowerShell` | remote-exec guard | Blocks running code fetched from the network or planted in a dependency. Every harness, every tier. §1.2.1 |
+| `PreToolUse: Bash\|PowerShell` | remote-exec guard | Blocks running code fetched from the network or planted in a dependency, and shell reads of `.env` files. Every harness, every tier. §1.2.1 |
 | `PreToolUse: Bash` | secret scan | Blocks `git commit` if the staged diff contains a key/JWT/token pattern |
 | `PreToolUse: Write` | ad-hoc-doc guard | Blocks stray `FINDINGS.md`/`REPORT.md` at repo root |
 | `PreToolUse: Edit\|Write` | protected-file guard | Blocks edits to `.env`, lockfiles, etc. |
@@ -130,7 +130,9 @@ shortcut, and also covers the shell commands Claude Code recognizes as writes (`
 `CLAUDE.md`, in one line, that editing the harness will ask each time, by design. The
 harness guard below covers what the rules can't see: scripts that write files
 themselves (`node -e`, `python -c`), git restoring a guard, PowerShell's file cmdlets, and
-switching hooks off. Its override is read only from the hook's own environment, so the
+switching hooks off. It also blocks the ordinary shell writes (`sed -i`, redirects, `cp`,
+`mv`, `rm`, `tee`) aimed at harness files, a second layer for when Claude Code doesn't
+recognize a command as a write. Its override is read only from the hook's own environment, so the
 user sets it by starting the session with it (`ALLOW_HARNESS_EDIT=1 claude`); a command
 that merely contains the text can't switch it on.
 
@@ -139,7 +141,13 @@ that merely contains the text can't switch it on.
 reach, which no list of patterns can match. On native Windows there is no sandbox: say so
 in `CLAUDE.md` and suggest WSL2 for work on untrusted code. The remote-exec guard below
 covers a small set of high-value patterns on every platform. Don't grow it into a list of
-every network tool; that list never ends, and it isn't the main defense.
+every network tool; that list never ends, and it isn't the main defense. It also blocks
+reading a `.env` file through the shell (`cat`, `less`, `grep`, `source`, `< .env`, an
+inline `node -e` or `python -c`): the `Read(.env)` deny rules see the Read tool and the
+shell reads Claude Code recognizes, and on native Windows nothing stands behind them.
+`.env.example`, `.env.sample` and `.env.template` stay readable, and commands that only
+name the file (`echo .env >> .gitignore`, `cp .env.example .env`) still run. A recursive
+`grep` that never names the file still sees it; that part is the sandbox's job.
 
 Generate these three hooks close to these reference implementations, adjusting only the
 release commands to the project's own. All three match `Bash|PowerShell` (§1.7), since on
@@ -197,6 +205,8 @@ const WRITERS = [
   new RegExp(String.raw`\bgit${GIT_OPTS}\s+(?:checkout|restore|reset|stash|clean)\b`, "i"),
   /\b(?:Set-Content|Add-Content|Clear-Content|Out-File|Remove-Item|Copy-Item|Move-Item|New-Item|Rename-Item)\b/i,
   /\[(?:System\.)?IO\.File\]::/i,
+  /\b(?:sed|perl)\s+(?:[^|;&]*\s)?-[a-zA-Z]*i/i,
+  /\b(?:cp|mv|rm|rmdir|truncate|chmod|chown|ln|dd|install|unlink|shred)\b/i,
 ];
 const REDIRECT = new RegExp(String.raw`(?:>>?|\|\s*tee(?:\s+-a)?)\s*['"]?[^\s'"|;&]*` + HARNESS, "i");
 let record = () => {};
@@ -225,11 +235,20 @@ try {
 ```js
 #!/usr/bin/env node
 // PreToolUse: Bash|PowerShell. Blocks running code fetched from the network or planted
-// in a dependency, DNS lookups built from command output, and secret files read from
-// PowerShell. Override: start the session with ALLOW_REMOTE_EXEC=1.
+// in a dependency, DNS lookups built from command output, and .env files read through
+// the shell. Override: start the session with ALLOW_REMOTE_EXEC=1.
 // Exit 0 = allow, 2 = block. Fails open on its own errors.
 "use strict";
 const FETCH = String.raw`(?:curl|wget|iwr|irm|Invoke-WebRequest|Invoke-RestMethod)`;
+// A .env file (not .env.example/.sample/.template) and something that reads it, in the
+// same part of a command chain, so `echo .env >> .gitignore && git diff` still runs.
+// Inline scripts are checked whole, since their code can contain `;`.
+const SECRET = /(?:^|[\s'"=:\/\\@<(])\.env(?:\.(?!example\b|sample\b|template\b)[\w.-]+)?(?=$|[\s'"|;&)>])/i;
+const READER = /\b(?:cat|tac|nl|less|more|head|tail|bat|strings|xxd|od|hexdump|base64|grep|egrep|fgrep|rg|awk|gawk|sed|cut|sort|uniq|diff|scp|rsync|source|Get-Content|gc|type|Select-String|sls)\b|^\s*\.\s+\S|<\s*['"]?[^\s'"]*\.env/i;
+const INLINE = /\b(?:node|deno|bun|python3?|py|ruby|perl|php)(?:\.exe)?\s+(?:[^|;&]*\s)?(?:-e|--eval|-p|-c|-r)\b/i;
+const READS_SECRET = {
+  test: (c) => (INLINE.test(c) && SECRET.test(c)) || c.split(/&&|\|\||[;&|\n]/).some((p) => SECRET.test(p) && READER.test(p)),
+};
 const RULES = [
   [new RegExp(String.raw`\b${FETCH}\b[^;&]*\|\s*(?:sudo\s+)?(?:ba|z|da|k)?sh\b`, "i"), "it pipes a download into a shell"],
   [new RegExp(String.raw`\b(?:ba|z)?sh\s+<\(\s*${FETCH}\b`, "i"), "it runs a download as a script"],
@@ -239,7 +258,7 @@ const RULES = [
   [/(?:^|[\s;&|('"])(?:\.[\\/])?(?:node_modules|vendor|\.venv|venv|site-packages)[\\/]\S*\.(?:sh|bash|ps1|cmd|bat)\b/i, "it runs a script from inside a dependency"],
   [/\b(?:node|deno|bun)(?:\.exe)?\s+(?:[^|;&]*\s)?(?:-e|--eval|-p)\s[\s\S]*(?:fetch\(|https?:\/\/|require\(\s*['"](?:node:)?(?:https?|net|dgram)['"]\))/i, "it makes a network call from an inline script"],
   [/\b(?:python3?|py)(?:\.exe)?\s+(?:[^|;&]*\s)?-c\s[\s\S]*(?:urllib|requests\.|http\.client|socket\.|https?:\/\/)/i, "it makes a network call from an inline script"],
-  [/\b(?:Get-Content|gc|type)\b\s+['"]?(?:[^\s'"]*[\\/])?\.env(?:\.(?!example\b)[\w.-]+)?['"]?(?:\s|$)/i, "it reads a secrets file"],
+  [READS_SECRET, "it reads a secrets file"],
 ];
 let record = () => {};
 try { record = require("./lib/friction.cjs"); } catch {}
