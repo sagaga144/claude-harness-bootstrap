@@ -10,6 +10,8 @@
 //   node scripts/run-evals.mjs --major         # Haiku, Sonnet, Opus, Fable; both arms; 3 runs each
 //   node scripts/run-evals.mjs --heldout C:/path/to/heldout-evals --model sonnet --runs 3
 //   node scripts/run-evals.mjs --wait-min 20 --max-tries 12
+//   node scripts/run-evals.mjs --release --keep-temp   # keep each session's files and trace
+//                                                      # (in TEMP: point it somewhere readable)
 //
 // Results: evals-run/<commit>/<model>/<case>.json plus evals-run/<commit>/SUMMARY.md,
 // with one column per model. A case already recorded for this commit and model
@@ -35,6 +37,7 @@ const preset = flag('--major') ? { models: ['haiku', 'sonnet', 'opus', 'fable'],
   : { models: [], onlyWith: false, runs: undefined };
 const models = many('--model').length > 0 ? many('--model') : preset.models.length > 0 ? preset.models : ['default'];
 const onlyWith = flag('--only-with') || preset.onlyWith;
+const keepTemp = flag('--keep-temp');
 const runs = opt('--runs', preset.runs);
 
 const git = (...a) => execFileSync('git', a).toString().trim();
@@ -107,7 +110,8 @@ for (const model of models) {
         '--no-publish', '--json', file,
         ...(model === 'default' ? [] : ['--model', model]),
         ...(runs ? ['--runs', String(runs)] : []),
-        ...(onlyWith ? ['--ablation', 'none'] : [])];
+        ...(onlyWith ? ['--ablation', 'none'] : []),
+        ...(keepTemp ? ['--keep-temp'] : [])];
       spawnSync(claude.bin, cmd, { cwd: evalRoot, stdio: ['ignore', 'ignore', 'inherit'], shell: claude.shell });
       const why = existsSync(file) ? interruption(JSON.parse(readFileSync(file, 'utf8'))) : 'no result written';
       if (!why) { console.log(`  recorded`); break; }
