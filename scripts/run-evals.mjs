@@ -191,7 +191,7 @@ for (const model of models) {
 // A cell is the pass rate across runs, so flaky cases show as 2/3 rather than fail.
 let claudeVersion = '';
 const rate = (list) => (list && list.length ? { pass: list.filter((r) => r.passed).length, of: list.length } : null);
-const fmt = (r) => (r === null ? '—' : r.of === 1 ? (r.pass ? 'pass' : 'fail') : `${r.pass}/${r.of}`);
+const fmt = (r) => (r === null ? '—' : typeof r === 'string' ? r : r.of === 1 ? (r.pass ? 'pass' : 'fail') : `${r.pass}/${r.of}`);
 const totals = Object.fromEntries(models.map((m) => [m, 0]));
 const rows = [];
 for (const c of cases) {
@@ -211,7 +211,9 @@ for (const c of cases) {
     const alone = existsSync(withoutFile) ? JSON.parse(readFileSync(withoutFile, 'utf8')).cases[0] : null;
     const pluginOnly = new Set((alone?.graders ?? []).filter((g) => g.type === 'tool_used' && g.config?.tool === 'Skill').map((g) => g.name));
     const rescored = (alone?.arms.with ?? []).map((r) => ({ passed: (r.graders ?? []).every((g) => g.passed || pluginOnly.has(g.name)) }));
-    const wo = rate(k.arms.without?.length ? k.arms.without : rescored);
+    // A case whose only check is the skill firing has nothing to score without the plugin.
+    const nothingLeft = alone && (alone.graders ?? []).every((g) => pluginOnly.has(g.name));
+    const wo = nothingLeft ? 'n/a' : rate(k.arms.without?.length ? k.arms.without : rescored);
     const bad = interruption(res) ? ' (interrupted)' : '';
     if (w && (w.pass === w.of || (extra.length && w.pass * 2 > w.of)) && !bad) totals[model]++;
     cells.push(`${fmt(w)}${wo ? ` (without: ${fmt(wo)})` : ''}${bad}`);
