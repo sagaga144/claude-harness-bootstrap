@@ -1,7 +1,7 @@
 ---
 type: regex
-target: { source: file, path: CLAUDE.md }
-pattern: 'semver'
+target: last_message
+pattern: 'semver|semantic versioning'
 flags: i
 weight: 2
 ---

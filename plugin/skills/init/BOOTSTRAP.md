@@ -206,7 +206,8 @@ stack-agnostic, keep it near-verbatim. Then:
 ```
 
 If the description names no project name at all, pick a short, reasonable one yourself
-and say so in Gotchas as an assumption — don't leave a placeholder in the output, and
+and say so in Gotchas as an assumption — don't leave a placeholder in the output (use
+that name in paths too: `src/csvtool/`, never `src/<pkg>/`), and
 don't treat naming it as ambiguous enough to ask about (it's cheap to rename later, not a
 genuine fork).
 
