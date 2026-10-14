@@ -487,10 +487,13 @@ lines).
 - The generated `CLAUDE.md` gains one line: run `/harness-bootstrap:check` after a big
   change or a Claude Code update.
 
-**Status: done, with one gap.** `plugin/skills/check/SKILL.md` covers checks 1 to 7 and
-tests the guards with its own payloads, including the v0.8 attacks, and the generated
-`CLAUDE.md` points to it under Project-Specific Notes. **Not done:** check 8 (workarounds
-due for review) waits for the workaround tags, which ship in a later release.
+**Status: done, with two gaps.** `plugin/skills/check/SKILL.md` covers checks 1 to 7 and
+tests the guards with its own payloads, including the v0.8 attacks. **Not done:** check 8
+(workarounds due for review) waits for the workaround tags, which ship in a later
+release. The `CLAUDE.md` line pointing to `/harness-bootstrap:check` was written
+(`7fbd4f8`) and then moved to v0.9, so v0.8's plugin folder stays exactly the one its
+Haiku + Sonnet run tested and those results count toward the major run. The README
+documents `/harness-bootstrap:check` in the meantime.
 
 ### Step 2.5: A hook behind the rule-only attacks
 

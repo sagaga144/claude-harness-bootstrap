@@ -324,8 +324,6 @@ UI-specific advice (a11y, CSS tokens) that only applies when there's a UI.
 Keep as-is in structure (`.claude/BUGS.md`, a Gotchas section) — genuinely universal,
 just empty/growing as the project accumulates real bugs and traps. Note any assumption
 you made under ambiguity here (e.g. "assumed pytest since no test framework was declared").
-Add one line under Project-Specific Notes: run `/harness-bootstrap:check` after a big
-change to the codebase or a Claude Code update, to see whether the harness still fits.
 
 ### Pipeline Flow
 
