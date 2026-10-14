@@ -1,16 +1,15 @@
 ---
 paths:
-  - "crates/api/**"
-  - "Cargo.toml"
+  - "backend/**"
 ---
 
-# Backend (crates/api) conventions
+# backend/ — Rust + Axum conventions
 
-- Layout: `src/routes/<resource>.rs` (router + handlers), `src/repo/<resource>.rs` (sqlx), `src/auth/` (extractors, sessions, password hashing), `src/billing/` (provider client and webhooks), `src/error.rs` (`ApiError` → `ApiErrorBody`), `src/config.rs`.
-- State: one `AppState { db: PgPool, config: Arc<Config>, .. }`, passed via `State<AppState>`. No globals or `lazy_static` for runtime config.
-- Handlers: `async fn(State, AuthUser, Json<ContractReq>) -> Result<Json<ContractResp>, ApiError>`. Auth is an extractor, so a handler that forgets it doesn't compile against `AuthUser`.
-- Repo functions take the owner/org id as an explicit parameter; there is no "get by id" without an owner on owned tables.
-- Config is read once from the environment at startup (`DATABASE_URL`, `SESSION_SECRET`, `PAYMENT_*`), failing fast with a clear message if anything is missing.
-- Errors: `thiserror` in the library code, `anyhow` only in `main.rs`. Internal error text is logged with `tracing`, never returned.
-- Tests: unit tests in-module; integration tests in `crates/api/tests/` against a real Postgres (`#[sqlx::test]`), covering the happy path, unauthenticated (401) and wrong-owner (404, not 403, to avoid leaking existence) cases.
-- `sqlx::query!` macros need `DATABASE_URL` or the offline `.sqlx/` cache. Run `cargo sqlx prepare --workspace` after changing queries and commit `.sqlx/`.
+- Handlers are thin: extract, authorize, call domain logic, map to a contract response type. Return the contract type, never a database row struct.
+- One error enum implementing `IntoResponse`; it produces the error body shape from `contracts/` and never leaks internals (SQL errors, stack traces) or whether an account exists.
+- Auth is a layer/extractor that every non-public route goes through; public routes are listed explicitly in one place.
+- Authorization is per resource: load by `(id, owner)` in one query rather than load-then-check.
+- Secrets and config come from environment variables read once at startup into a typed config; fail fast if missing.
+- Payment webhooks: verify the signature over the raw bytes before parsing, store the provider event id with a unique constraint for idempotency, return 2xx only after the work is durably recorded.
+- Log with `tracing` and structured fields; never log request bodies on auth or billing routes.
+- Tests: handler tests through the router with a test database; at least one wrong-user test per resource endpoint.

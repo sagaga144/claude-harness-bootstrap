@@ -1,5 +1,6 @@
 # Bug log
 
-One entry per real bug: date, symptom, root cause, fix, and the guard (test/hook/reviewer rule) that now prevents it.
+Record each real bug once fixed: date, symptom, root cause, fix, and how to avoid it. Contract-drift bugs (a field renamed or retyped on one side only) go here too.
 
-<!-- newest first -->
+| Date | Symptom | Root cause | Fix |
+|---|---|---|---|

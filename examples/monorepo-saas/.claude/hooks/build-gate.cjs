@@ -1,84 +1,77 @@
 #!/usr/bin/env node
-// Stop. Once per finished turn, checks only what this working tree changed:
-//   1. contracts drift: crates/contracts newer than packages/contracts/src/generated
-//   2. Rust: cargo check --workspace (if crates/ or Cargo files changed)
-//   3. TypeScript: tsc -b packages/web (if packages/ changed). Vite never type-checks.
-// Exit 2 with the errors = block (Claude keeps working). A missing toolchain or missing
-// project scaffolding fails open with a note. Override: ALLOW_STOP=1.
+// Stop: runs `cargo check` / `tsc --noEmit` for the packages with uncommitted changes and
+// blocks (exit 2) with the compiler output if one fails. A missing toolchain, missing
+// manifest, timeout or any internal error is NOT a failure: those fail open (exit 0).
 "use strict";
 const fs = require("fs");
 const path = require("path");
-const { execSync } = require("child_process");
+const { execFileSync } = require("child_process");
 
-function run(cmd, cwd, timeout) {
-  return execSync(cmd, { cwd, stdio: ["ignore", "pipe", "pipe"], encoding: "utf8", timeout, maxBuffer: 32 * 1024 * 1024 });
-}
-function has(bin) {
+const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+const IGNORE = { stdio: ["ignore", "pipe", "pipe"], encoding: "utf8", timeout: 50000, maxBuffer: 20 * 1024 * 1024 };
+
+function hasTool(cmd) {
   try {
-    run(process.platform === "win32" ? `where ${bin}` : `command -v ${bin}`, undefined, 5000);
+    if (process.platform === "win32") execFileSync("where", [cmd], IGNORE);
+    else execFileSync("sh", ["-c", 'command -v "$1"', "sh", cmd], IGNORE);
     return true;
   } catch { return false; }
 }
-function newest(dir) {
-  let max = 0;
-  if (!fs.existsSync(dir)) return 0;
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, e.name);
-    max = Math.max(max, e.isDirectory() ? newest(p) : fs.statSync(p).mtimeMs);
+
+// Returns an error string if the check failed, null if it passed or could not run.
+function run(cmd, args, cwd) {
+  try {
+    execFileSync(cmd, args, { ...IGNORE, cwd });
+    return null;
+  } catch (err) {
+    if (typeof err.status === "number" && err.status !== 0) {
+      return String(err.stdout || "") + String(err.stderr || "");
+    }
+    return null; // spawn error or timeout: fail open
   }
-  return max;
 }
-function tail(err) {
-  const out = `${(err && err.stdout) || ""}\n${(err && err.stderr) || ""}`.trim() || String(err && err.message);
-  return out.split(/\r?\n/).slice(-40).join("\n");
-}
-function block(msg) {
-  console.error(msg);
-  process.exit(2);
+
+function findTsc(dir) {
+  for (const base of [dir, root]) {
+    const p = path.join(base, "node_modules", "typescript", "bin", "tsc");
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
 }
 
 try {
-  if (process.env.ALLOW_STOP === "1") process.exit(0);
-  const input = JSON.parse(fs.readFileSync(0, "utf8") || "{}");
-  const root = process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd();
-
-  let status = "";
-  try { status = run("git status --porcelain -uall", root, 10000); } catch { process.exit(0); }
-  const changed = status.split(/\r?\n/).filter(Boolean).map((l) => l.slice(3).replace(/^"|"$/g, "").split(" -> ").pop());
-  if (!changed.length) process.exit(0);
+  if (!hasTool("git")) process.exit(0);
+  const status = execFileSync("git", ["status", "--porcelain"], { ...IGNORE, cwd: root });
+  const changed = status.split("\n").map((l) => l.slice(3).replace(/\\/g, "/"));
+  const touched = (d) => changed.some((f) => f.startsWith(d + "/"));
+  const contractsTouched = touched("contracts");
+  const failures = [];
   const notes = [];
 
-  // 1. Contracts drift
-  const contractsSrc = path.join(root, "crates", "contracts", "src");
-  const generated = path.join(root, "packages", "contracts", "src", "generated");
-  if (changed.some((f) => f.startsWith("crates/contracts/")) && fs.existsSync(contractsSrc)) {
-    if (newest(contractsSrc) > newest(generated)) {
-      block("Contracts drift: crates/contracts changed after packages/contracts/src/generated was last generated. Run `npm run contracts:gen`, then fix whatever the frontend type-check flags.");
+  const backend = path.join(root, "backend");
+  if ((touched("backend") || contractsTouched) && fs.existsSync(path.join(backend, "Cargo.toml"))) {
+    if (!hasTool("cargo")) notes.push("cargo not installed: skipped backend check");
+    else {
+      const out = run("cargo", ["check", "--quiet", "--message-format", "short"], backend);
+      if (out) failures.push("cargo check failed in backend/:\n" + out.trim().split("\n").slice(-30).join("\n"));
     }
   }
 
-  // 2. Rust
-  if (changed.some((f) => f.startsWith("crates/") || /^Cargo\.(?:toml|lock)$/.test(f)) && fs.existsSync(path.join(root, "Cargo.toml"))) {
-    if (!has("cargo")) {
-      notes.push("build-gate: cargo is not installed, so the Rust check was skipped (install via rustup).");
-    } else {
-      try { run("cargo check --workspace --all-targets --message-format short", root, 45000); }
-      catch (err) { block(`cargo check failed:\n${tail(err)}`); }
-    }
+  for (const pkg of ["contracts", "frontend"]) {
+    const dir = path.join(root, pkg);
+    if (!(touched(pkg) || (pkg === "frontend" && contractsTouched))) continue;
+    if (!fs.existsSync(path.join(dir, "tsconfig.json"))) continue;
+    const tsc = findTsc(dir);
+    if (!tsc) { notes.push(`typescript not installed (npm install): skipped ${pkg}/ type-check`); continue; }
+    const out = run(process.execPath, [tsc, "--noEmit", "-p", dir], root);
+    if (out) failures.push(`tsc --noEmit failed in ${pkg}/:\n` + out.trim().split("\n").slice(-30).join("\n"));
   }
 
-  // 3. TypeScript
-  if (changed.some((f) => f.startsWith("packages/")) && fs.existsSync(path.join(root, "packages", "web", "tsconfig.json"))) {
-    const tsc = path.join(root, "node_modules", "typescript", "bin", "tsc");
-    if (!fs.existsSync(tsc)) {
-      notes.push("build-gate: node_modules/typescript is missing, so the TS type-check was skipped (run npm install).");
-    } else {
-      try { run(`node "${tsc}" -b packages/web`, root, 45000); }
-      catch (err) { block(`TypeScript type-check failed (tsc -b packages/web):\n${tail(err)}`); }
-    }
+  for (const n of notes) console.error("build-gate: " + n);
+  if (failures.length) {
+    console.error("Build gate: fix these before finishing.\n\n" + failures.join("\n\n"));
+    process.exit(2);
   }
-
-  if (notes.length) console.error(notes.join("\n"));
   process.exit(0);
 } catch {
   process.exit(0);

@@ -1,22 +1,15 @@
 ---
-description: Full pre-ship gate. Runs Rust, contracts-drift, and web checks, then the reviewers the diff calls for, and ends READY or NOT-READY.
+description: Run every check (Rust, TypeScript, contract parity) and report READY or NOT-READY
 ---
 
-Run every step even if an earlier one fails, then report one table (step | result | key error lines). Don't fix anything during `/verify`; report only.
+Verify the whole monorepo. Run each step for the packages that exist (skip a package whose manifest isn't there yet, and say so), in this order, and report the real output of any failure:
 
-1. **Rust:** `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`
-2. **Contracts drift:** `npm run contracts:check` (regenerates the TS from `crates/contracts` and fails if `packages/contracts/src/generated` differs from what's committed)
-3. **Web:** `npm run typecheck -w packages/web` (Vite builds don't type-check; this is the real check), `npm run lint -w packages/web`, `npm test -w packages/web`, `npm run build -w packages/web`
-4. **Domain scan** of `git diff main...HEAD` plus uncommitted changes:
-   - an API-shaped `interface`/`type` declared in `packages/web` instead of imported from `@ledgerline/contracts`
-   - a handler returning `serde_json::json!` instead of a contract type
-   - `console.log`, `dbg!`, `println!` in shipped source
-   - a modified (not added) file in `crates/api/migrations/`
-5. **Reviewers.** Invoke via the Agent tool, passing the diff range and the changed file list explicitly in the prompt (they don't see this conversation):
-   - always: `correctness-reviewer`
-   - if any changed path matches auth/session/login/password/billing/payment/subscription/invoice/webhook, or touches the auth extractor or CORS/cookie config: `security-reviewer`
-   - if `crates/api/migrations/` or any sqlx query changed: `db-guard`
+1. `backend/`: `cargo check`, then `cargo clippy --all-targets -- -D warnings`, then `cargo fmt --check`, then `cargo test`.
+2. `contracts/`: `npx tsc --noEmit`, `npm run lint`, `npm test`. If a codegen script exists, run it and confirm `git status` shows no diff in the generated files (a diff means the committed output is stale).
+3. `frontend/`: `npx tsc --noEmit` (the build alone does not type-check), `npm run lint`, `npm test`, `npm run build`.
+4. Contract parity: for each request/response type changed in `git diff`, confirm the Rust type, the `contracts/` definition and the frontend usage agree on field names, types and optionality. For anything beyond a trivial change, invoke the `correctness-reviewer` agent and pass it the changed file paths explicitly.
+5. Secrets: `git diff` and `git diff --cached` contain no keys, tokens or `.env` content.
 
-If a toolchain is missing (no `cargo`, no `node_modules`), mark that step **SKIPPED (tool missing)**. That is NOT-READY, not a pass. If the scaffolding doesn't exist yet (no `Cargo.toml`/`package.json`), say so and stop.
+If a tool isn't installed, say which and mark that step SKIPPED, not passed.
 
-**Verdict:** READY only if every step passed and every reviewer verdict is PASS. Anything else is **NOT-READY**, with the blocking items listed first. Fail closed: an unclear result is NOT-READY.
+End with one line: `READY` only if nothing failed and nothing relevant was skipped; otherwise `NOT-READY` followed by the list of failures and skips. Never push.

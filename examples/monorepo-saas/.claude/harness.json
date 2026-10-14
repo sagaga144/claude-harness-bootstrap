@@ -1,0 +1,43 @@
+{
+  "generator": "harness-bootstrap",
+  "version": "0.8.0",
+  "generatedAt": "2026-10-14",
+  "mode": "fresh",
+  "profile": {
+    "language": "Rust + TypeScript",
+    "projectType": "full-stack web app (monorepo)",
+    "ui": true,
+    "persistence": true,
+    "trustBoundary": "auth + payments + user data",
+    "published": false,
+    "deployTarget": "not yet",
+    "costAnswer": "keep cost low",
+    "scopeAnswer": "essentials"
+  },
+  "files": [
+    "CLAUDE.md",
+    ".gitignore",
+    ".claude/settings.json",
+    ".claude/hooks/guard-bash-push.cjs",
+    ".claude/hooks/guard-harness.cjs",
+    ".claude/hooks/guard-remote-exec.cjs",
+    ".claude/hooks/lib/friction.cjs",
+    ".claude/hooks/critical-rules.cjs",
+    ".claude/hooks/scan-secrets.cjs",
+    ".claude/hooks/warn-debug-print.cjs",
+    ".claude/hooks/contract-parity-note.cjs",
+    ".claude/hooks/build-gate.cjs",
+    ".claude/agents/project-manager.md",
+    ".claude/agents/backend-engineer.md",
+    ".claude/agents/frontend-engineer.md",
+    ".claude/agents/correctness-reviewer.md",
+    ".claude/agents/security-reviewer.md",
+    ".claude/agents/db-guard.md",
+    ".claude/rules/contracts.md",
+    ".claude/rules/backend.md",
+    ".claude/rules/frontend.md",
+    ".claude/commands/verify.md",
+    ".claude/BUGS.md",
+    ".claude/harness.json"
+  ]
+}

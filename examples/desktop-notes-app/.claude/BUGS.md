@@ -1,11 +1,5 @@
-# Bug Tracking Log
+# Bug Log
 
-One entry per real bug once it's fixed: date, symptom, root cause, fix, and the test that now guards it. Reviewers read this file, so add known reviewer false positives under their own heading too.
+Non-obvious bugs and their root causes. Newest first. Format: date — symptom — root cause — fix — regression test.
 
-## Bugs
-
-_None yet._
-
-## Reviewer false positives
-
-_None yet._
+(none yet)

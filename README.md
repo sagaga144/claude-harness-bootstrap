@@ -55,29 +55,29 @@ monorepo with real auth and payment data
 .claude/
 ├── agents/
 │   ├── backend-engineer.md
-│   ├── correctness-reviewer.md     # also checks frontend/backend type drift
+│   ├── correctness-reviewer.md     # also checks backend/contracts/frontend agree
 │   ├── db-guard.md                 # accounts and billing data
 │   ├── frontend-engineer.md
-│   ├── planner.md
+│   ├── project-manager.md
 │   └── security-reviewer.md        # auth + payments
 ├── commands/
 │   └── verify.md
 ├── hooks/
+│   ├── lib/friction.cjs            # every guard logs its decisions here (4 fields, no commands)
 │   ├── build-gate.cjs
+│   ├── contract-parity-note.cjs
 │   ├── critical-rules.cjs
 │   ├── guard-bash-push.cjs
 │   ├── guard-harness.cjs           # security baseline: the harness protects itself
-│   ├── guard-remote-exec.cjs       # security baseline: no running fetched code
-│   ├── post-edit-notes.cjs
-│   ├── protect-files.cjs
-│   └── secret-scan.cjs
+│   ├── guard-remote-exec.cjs       # security baseline: no running fetched code, no .env reads
+│   ├── scan-secrets.cjs
+│   └── warn-debug-print.cjs
 ├── rules/
 │   ├── backend.md
 │   ├── contracts.md
 │   └── frontend.md
-├── skills/
-│   └── add-endpoint/SKILL.md
 ├── BUGS.md
+├── harness.json                    # version stamp: what built this, from which traits
 └── settings.json                   # ask rules on the harness, sandbox on
 ```
 
@@ -161,8 +161,8 @@ and from a subfolder. No model calls; it runs in seconds.
 | | Blocked by hooks | Counting permission rules |
 |---|---|---|
 | Example harnesses from v0.5.x / v0.6.1 | 0 of 15 | 2 of 15 |
-| Example harnesses regenerated with v0.7.0 | 10 or 11 of 15 | **15 of 15** |
-| The hooks the spec gives every v0.8.0 harness | **12 of 15** | **15 of 15** |
+| Example harnesses regenerated with v0.7.0 | 10 or 11 of 15 | 15 of 15 |
+| Example harnesses regenerated with v0.8.0 | **12 of 15** | **15 of 15** |
 
 What the 15 are: piping a download into a shell (Bash and PowerShell), DNS exfiltration,
 an inline network call from a script, a setup script planted in a dependency, reading

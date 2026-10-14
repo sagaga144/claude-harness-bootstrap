@@ -7,18 +7,23 @@ const PATTERNS = [
   new RegExp(String.raw`\bgit${GIT_OPTS}\s+push\b`, "i"),
   /\b(?:npm|pnpm|yarn)\s+publish\b/i,
   /\bcargo\s+publish\b/i,
+  /\btwine\s+upload\b/i,
+  /\bgoreleaser\s+release\b/i,
   /\bgh\s+release\s+create\b/i,
-  /\bgh\s+pr\s+merge\b/i,
 ];
+let record = () => {};
+try { record = require("./lib/friction.cjs"); } catch {}
 try {
-  if (process.env.ALLOW_PUSH === "1") process.exit(0);
   const input = JSON.parse(require("fs").readFileSync(0, "utf8") || "{}");
   const cmd = String((input.tool_input && input.tool_input.command) || "");
   if (PATTERNS.some((re) => re.test(cmd))) {
-    console.error("Blocked: this pushes, merges or publishes. Ask the user to run it, or restart the session with ALLOW_PUSH=1.");
+    if (process.env.ALLOW_PUSH === "1") { record("guard-bash-push", "PreToolUse", "override"); process.exit(0); }
+    record("guard-bash-push", "PreToolUse", "block");
+    console.error("Blocked: this pushes or publishes. Ask the user to run it, or restart the session with ALLOW_PUSH=1.");
     process.exit(2);
   }
   process.exit(0);
 } catch {
+  record("guard-bash-push", "PreToolUse", "fail-open");
   process.exit(0);
 }

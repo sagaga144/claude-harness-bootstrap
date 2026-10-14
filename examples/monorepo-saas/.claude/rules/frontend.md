@@ -1,14 +1,14 @@
 ---
 paths:
-  - "packages/web/**"
+  - "frontend/**"
 ---
 
-# Frontend (packages/web) conventions
+# frontend/ — React + TypeScript conventions
 
-- TypeScript `strict: true`, plus `noUncheckedIndexedAccess`. No `any`, no `@ts-ignore`, and no `as` on API data.
-- API access: `src/api/client.ts` holds one `request<TReq, TRes>()` wrapper (base URL from `VITE_API_URL`, `credentials: "include"`, which parses `ApiErrorBody` into a typed error). Each resource gets `src/api/<resource>.ts` with typed functions using `@ledgerline/contracts` types only.
-- Server state: TanStack Query (`useQuery`/`useMutation`) with keys from `src/api/keys.ts`. No hand-rolled fetch-in-`useEffect`.
-- Layout: `src/routes/` (pages), `src/components/` (shared UI), `src/features/<feature>/` (feature-local components and hooks).
-- Every `VITE_*` env var ships to the browser. Never put a secret in one; the payment provider's *publishable* key is the only payment value allowed here.
-- Billing UI uses the provider's hosted checkout/elements; our code never sees card fields.
-- Tests: Vitest + Testing Library, `*.test.tsx` beside the component. Mock at the `src/api/` boundary, not `fetch`.
+- All API calls go through one typed client module whose request/response types are imported from `contracts/`. Components never call `fetch` directly.
+- Never `as`-cast API data. If runtime validation of responses is added, it is derived from the contract, not written separately.
+- `npm run build` does not type-check (Vite/esbuild); `npx tsc --noEmit` is the real check.
+- Every request has loading, error and empty states. Error messages shown to users come from the contract's error shape, not raw server text.
+- Auth tokens: prefer httpOnly cookies set by the server; never `localStorage`. Never log tokens or payment details.
+- Payment: card entry only via the provider's hosted fields/elements; the client sends the provider token or session id, never an amount the server will trust.
+- UI permission checks are cosmetic; the backend is the authority.

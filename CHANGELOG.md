@@ -27,6 +27,9 @@ you when it has drifted from the code.
   hooks every v0.8.0 harness gets block 12 of 15 (v0.7.1: 8 of 13), 15 of 15 counting
   permission rules, with no harmless twin blocked and every friction-log line clean
   ([matrix](docs/baselines/hooks-v0.8.0.md)).
+- Three examples regenerated with v0.8.0 (monorepo-saas, terraform-aws-infra,
+  desktop-notes-app), each with its stamp and friction log, copied as generated with no
+  edits: 12 of 15 attacks blocked by hooks, 15 of 15 counting rules.
 - Evals: two new cases for the check skill (14 in total). Every LLM-judged grader now has
   criteria a judge can't read two ways, so scores before and after 0.8.0 aren't strictly
   comparable on those graders.

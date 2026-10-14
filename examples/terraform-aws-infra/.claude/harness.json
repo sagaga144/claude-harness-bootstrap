@@ -1,0 +1,36 @@
+{
+  "generator": "harness-bootstrap",
+  "version": "0.8.0",
+  "generatedAt": "2026-10-14",
+  "claudeCodeVersion": "2.1.300",
+  "mode": "fresh",
+  "profile": {
+    "language": "Python + Terraform HCL",
+    "projectType": "infra/automation with CLI wrapper",
+    "ui": false,
+    "persistence": true,
+    "trustBoundary": "AWS credentials + irreversible prod changes",
+    "published": false,
+    "deployTarget": "AWS via Terraform (dev/staging/prod)",
+    "costAnswer": "keep cost low",
+    "scopeAnswer": "essentials"
+  },
+  "files": [
+    "CLAUDE.md",
+    ".gitignore",
+    ".claude/settings.json",
+    ".claude/hooks/lib/friction.cjs",
+    ".claude/hooks/guard-bash-push.cjs",
+    ".claude/hooks/guard-harness.cjs",
+    ".claude/hooks/guard-remote-exec.cjs",
+    ".claude/hooks/guard-terraform.cjs",
+    ".claude/hooks/guard-protected-files.cjs",
+    ".claude/hooks/critical-rules.cjs",
+    ".claude/hooks/build-gate.cjs",
+    ".claude/agents/planner.md",
+    ".claude/agents/cli-engineer.md",
+    ".claude/agents/infra-reviewer.md",
+    ".claude/commands/verify.md",
+    ".claude/BUGS.md"
+  ]
+}

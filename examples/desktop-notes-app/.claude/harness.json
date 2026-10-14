@@ -1,0 +1,36 @@
+{
+  "generator": "harness-bootstrap",
+  "version": "0.8.0",
+  "generatedAt": "2026-10-14",
+  "mode": "fresh",
+  "profile": {
+    "language": "Rust + TypeScript",
+    "projectType": "desktop app (Tauri + Svelte)",
+    "ui": true,
+    "persistence": true,
+    "trustBoundary": "webview-to-native IPC + vault file access",
+    "published": false,
+    "deployTarget": "not yet",
+    "costAnswer": "keep cost low (default; session was non-interactive)",
+    "scopeAnswer": "essentials (default; session was non-interactive)"
+  },
+  "files": [
+    "CLAUDE.md",
+    ".gitignore",
+    ".claude/settings.json",
+    ".claude/hooks/guard-bash-push.cjs",
+    ".claude/hooks/guard-harness.cjs",
+    ".claude/hooks/guard-remote-exec.cjs",
+    ".claude/hooks/lib/friction.cjs",
+    ".claude/hooks/critical-rules.cjs",
+    ".claude/hooks/secret-scan.cjs",
+    ".claude/hooks/warn-debug-print.cjs",
+    ".claude/hooks/build-gate.cjs",
+    ".claude/agents/project-manager.md",
+    ".claude/agents/tauri-engineer.md",
+    ".claude/agents/correctness-reviewer.md",
+    ".claude/agents/security-reviewer.md",
+    ".claude/commands/verify.md",
+    ".claude/BUGS.md"
+  ]
+}

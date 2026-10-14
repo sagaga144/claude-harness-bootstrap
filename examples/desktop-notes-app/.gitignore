@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+.svelte-kit/
+src-tauri/target/
+src-tauri/gen/
+*.log
+.env
+.env.*
+!.env.example
+.claude/session-data/
+.claude/settings.local.json
+.DS_Store
+Thumbs.db

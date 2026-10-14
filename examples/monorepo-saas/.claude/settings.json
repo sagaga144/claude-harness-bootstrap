@@ -9,42 +9,32 @@
       "Edit(.claude/hooks/**)", "Write(.claude/hooks/**)",
       "Edit(.claude/agents/**)", "Write(.claude/agents/**)",
       "Edit(.claude/settings.json)", "Write(.claude/settings.json)",
-      "Edit(.claude/settings.local.json)", "Write(.claude/settings.local.json)"
+      "Edit(.claude/settings.local.json)", "Write(.claude/settings.local.json)",
+      "Edit(.claude/harness.json)", "Write(.claude/harness.json)",
+      "Edit(.claude/session-data/friction.jsonl)", "Write(.claude/session-data/friction.jsonl)"
     ]
   },
   "sandbox": {
     "enabled": true,
-    "filesystem": { "allowWrite": ["~/.npm", "~/.cargo", "~/.rustup", "~/.cache"] },
-    "network": {
-      "allowedDomains": [
-        "registry.npmjs.org",
-        "crates.io", "index.crates.io", "static.crates.io",
-        "github.com"
-      ]
-    }
+    "filesystem": { "allowWrite": ["~/.npm", "~/.cargo", "~/.cache"] },
+    "network": { "allowedDomains": ["registry.npmjs.org", "crates.io", "index.crates.io", "static.crates.io", "github.com"] }
   },
   "hooks": {
-    "SessionStart": [
-      { "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/critical-rules.cjs"] }] }
-    ],
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/critical-rules.cjs"] }] }],
     "PreToolUse": [
       { "matcher": "Bash|PowerShell", "hooks": [
         { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-bash-push.cjs"] },
         { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-harness.cjs"] },
-        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-remote-exec.cjs"] },
-        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/secret-scan.cjs"] }
+        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-remote-exec.cjs"] }
       ] },
-      { "matcher": "Edit|Write", "hooks": [
-        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/protect-files.cjs"] }
+      { "matcher": "Bash", "hooks": [
+        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/scan-secrets.cjs"] }
       ] }
     ],
-    "PostToolUse": [
-      { "matcher": "Edit|Write", "hooks": [
-        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/post-edit-notes.cjs"] }
-      ] }
-    ],
-    "Stop": [
-      { "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/build-gate.cjs"], "timeout": 120 }] }
-    ]
+    "PostToolUse": [{ "matcher": "Edit|Write", "hooks": [
+      { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/warn-debug-print.cjs"] },
+      { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/contract-parity-note.cjs"] }
+    ] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/build-gate.cjs"], "timeout": 120 }] }]
   }
 }

@@ -1,16 +1,16 @@
 ---
 paths:
-  - "crates/contracts/**"
-  - "packages/contracts/**"
+  - "contracts/**"
 ---
 
-# Contracts conventions
+# contracts/ — the API's single source of truth
 
-- `crates/contracts` has no business logic and no dependencies beyond `serde`, `ts-rs` (and `uuid`/`chrono`/`time` with their ts-rs features). Axum, sqlx and anything else from the server stay out, so the crate stays a pure shape definition.
-- Every type: `#[derive(Debug, Clone, Serialize, Deserialize, TS)]`, `#[serde(rename_all = "camelCase")]`, `#[ts(export)]`. Enums: `#[serde(tag = "type", rename_all = "camelCase")]` for data-carrying variants, plain `rename_all` for unit variants.
-- Optional fields: `Option<T>` plus `#[serde(default, skip_serializing_if = "Option::is_none")]` plus `#[ts(optional)]`, so the TS reads `field?: T`. Use plain `Option<T>` (TS `T | null`) only when `null` is meaningful.
-- Ids are `Uuid` (TS `string`). Money is `i64` minor units, `#[ts(type = "number")]`, with a `currency: String` beside it. Timestamps are RFC 3339 strings.
-- One error envelope for every route: `ApiErrorBody { code: ErrorCode, message: String }`. `ErrorCode` is an enum, so the frontend can switch on it exhaustively.
-- Naming: `<Action><Resource>Request` / `<Resource>Response`, e.g. `CreateInviteRequest`, `InviteResponse`.
-- Renaming or retyping a field is a breaking API change: update the handler and every frontend usage in the same change.
-- `packages/contracts/src/generated/` is regenerated output (`npm run contracts:gen`) and is committed so the frontend builds without cargo. `packages/contracts/src/index.ts` only re-exports it.
+- Every request body, response body and error body the API exposes is defined here, once. Backend and frontend consume these definitions; neither redeclares them.
+- Pick one naming convention on the wire (recommended: `camelCase`) and apply it through one mechanism, e.g. `#[serde(rename_all = "camelCase")]` on the Rust side. Never rename a single field ad hoc.
+- Be explicit about optionality: absent field vs `null` vs empty are three different things. Prefer one.
+- 64-bit integers: JS numbers lose precision above 2^53. Ids and money-as-minor-units that can exceed that go over the wire as strings.
+- Money = integer minor units + ISO currency code. Timestamps = RFC 3339 UTC strings.
+- Enums are closed string unions with stable values; adding a variant is a change the frontend must handle.
+- A breaking change (remove/rename/retype a field) needs the backend and frontend updated in the same change set.
+- If types are generated, edit the source, regenerate, and commit the output; never hand-edit generated files.
+- No business logic in this package, and no secrets or server-only fields (password hashes, internal ids) in any type.
