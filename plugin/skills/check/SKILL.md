@@ -1,4 +1,5 @@
 ---
+name: check
 description: Audits an existing Claude Code harness (CLAUDE.md plus .claude/ hooks, agents, settings) and reports what has gone stale or unsafe since it was set up, with one proposed fix. Use when the user asks to check, audit, review, refresh or update their Claude Code setup or harness, asks whether it is still up to date or still protecting them, after a Claude Code or plugin update, or after a big change to the codebase (a new database, login, deploy or publish step). Works on harnesses this plugin didn't build too. Not for setting up a new project (that's /harness-bootstrap:init).
 ---
 
@@ -13,8 +14,8 @@ Read what's there first: `CLAUDE.md`, `.claude/settings.json` (and
 `settings.local.json` if present), the files under `.claude/hooks/`, `.claude/agents/`,
 `.claude/commands/`, `.claude/skills/`, `.claude/rules/`, and `.claude/harness.json` if it
 exists. For what a current harness should contain, the init skill's reference is in this
-plugin at `skills/init/HARNESS_REFERENCE.md` (an index into `skills/init/reference/`);
-read the parts a finding needs, not all of it.
+plugin at `skills/init/HARNESS_REFERENCE.md`, and the stamp and friction log are specified
+in `skills/init/LIFECYCLE.md`; read the sections a finding needs, not all of it.
 
 ## The checks
 
@@ -32,7 +33,7 @@ wrong in one sentence, and the fix.
    now. A new database dependency or migrations folder with no data-layer guard; a login,
    session or payment library with no security reviewer; a new `publish`/deploy step with
    no release check; a UI where there was none. Each is a missing trait-table row
-   (`reference/rules-and-agents.md` §1.4).
+   (`HARNESS_REFERENCE.md` §1.4).
 4. **Hooks still work.** `settings.json` parses. Every hook command uses the
    `${CLAUDE_PROJECT_DIR}` form (§1.7), not a bare relative path, and every `timeout` is
    in seconds (a value over 600 is almost certainly milliseconds by mistake). Then test

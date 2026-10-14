@@ -145,8 +145,18 @@ function testHarness(dir) {
     twin: dispatch(settings, fx.twin, work, work),
     rule: ruleFor(settings, fx.attack),
   }))
-  rmSync(dirname(work), { recursive: true, force: true })
-  return { name, rows }
+  // A harness with a friction log (v0.8+) must write exactly ts/guard/event/outcome per line.
+  const log = join(work, '.claude', 'session-data', 'friction.jsonl')
+  let friction = null
+  if (existsSync(log)) {
+    const lines = readFileSync(log, 'utf8').trim().split('\n').filter(Boolean)
+    const bad = lines.filter((l) => {
+      try { const o = JSON.parse(l); return Object.keys(o).sort().join() !== 'event,guard,outcome,ts' } catch { return true }
+    })
+    friction = { lines: lines.length, bad: bad.length }
+  }
+  rmSync(dirname(work), { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
+  return { name, rows, friction }
 }
 
 const results = harnesses.map(testHarness)
@@ -176,6 +186,12 @@ for (const h of results) {
   const subB = attacks.filter((r) => r.sub.verdict === 'blocked').length
   const either = attacks.filter((r) => r.root.verdict === 'blocked' || r.rule).length
   lines.push(`| ${h.name} | ${rootB}/${n} | ${subB}/${n} | ${either}/${n} |`)
+}
+const logged = results.filter((h) => h.friction)
+if (logged.length > 0) {
+  lines.push('', '## Friction log', '')
+  lines.push('Every line must hold exactly `ts`, `guard`, `event` and `outcome`; never command text or paths.', '')
+  for (const h of logged) lines.push(`- ${h.name}: ${h.friction.lines} lines, ${h.friction.bad === 0 ? 'all clean' : `**${h.friction.bad} with other fields**`}`)
 }
 const notes = results.flatMap((h) => h.rows.flatMap((r) => [...r.root.runs, ...r.sub.runs]
   .filter((x) => x.result === 'errored').map((x) => `${h.name} ${r.id}: ${x.hook} ${x.note}`)))

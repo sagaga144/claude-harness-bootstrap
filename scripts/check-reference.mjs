@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Builds the reference harness straight from the spec and runs the hook attack suite
-// on it, so the code blocks in HARNESS_REFERENCE.md are what gets tested.
+// on it, so the code blocks in HARNESS_REFERENCE.md and LIFECYCLE.md are what gets tested.
 //
 //   node scripts/check-reference.mjs                 # matrix on stdout
 //   node scripts/check-reference.mjs --out docs/baselines/hooks-reference.md
@@ -13,7 +13,8 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
 const root = execFileSync('git', ['rev-parse', '--show-toplevel']).toString().trim()
-const spec = readFileSync(join(root, 'plugin', 'skills', 'init', 'HARNESS_REFERENCE.md'), 'utf8')
+const spec = ['HARNESS_REFERENCE.md', 'LIFECYCLE.md']
+  .map((f) => readFileSync(join(root, 'plugin', 'skills', 'init', f), 'utf8')).join('\n')
 const out = join(root, 'hooks-run', 'reference-harness')
 rmSync(out, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
 

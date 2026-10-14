@@ -36,13 +36,18 @@
    fixed list). Design the pieces in Part 1's order, but **write `.claude/settings.json`
    first** of the `.claude/` files: it carries the security baseline (permission rules,
    sandbox, hook wiring), so if the user only lets one file through, it should be that
-   one. Then the guard hooks (§1.2.1: the harness, push and remote-exec guards), then the
-   other hooks, agents, rules, commands and skills.
+   one. Then the guard hooks (§1.2.1: the harness, push and remote-exec guards) and the
+   friction-log helper they record through (`LIFECYCLE.md` §1.11), then the other hooks,
+   agents, rules, commands and skills.
 4. **Verify** every hook and `settings.json` per `HARNESS_REFERENCE.md` §1.8, then run
    Step 3's consistency check so `CLAUDE.md` only describes files that exist.
 5. **Publish the Operator's Manual** per `HARNESS_REFERENCE.md` Part 2, once the
    harness exists.
-6. Commit the result on a branch. Never push without being asked.
+6. **Write the version stamp** `.claude/harness.json` per `LIFECYCLE.md` §1.10: the
+   plugin version, the profile's traits (never the user's own description) and the files
+   this run wrote. `/harness-bootstrap:check` reads it later. If an earlier `.claude/`
+   write was refused, it's one of the files not attempted (see below).
+7. Commit the result on a branch. Never push without being asked.
 
 Don't ask the user to approve each step — do the work, then summarize what you built and
 why. Step 1 opens with two short guiding questions by design (see below) — that's not
