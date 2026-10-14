@@ -63,7 +63,9 @@ node scripts/run-evals.mjs --model haiku --runs 3   # one model, three runs per 
 
 It runs each case as its own command, waits and retries only a case that was cut off by a
 usage limit or a dropped connection, and skips cases already recorded for the current
-commit. The merged table, one column per model, is written to
+commit. A case that fails only on LLM-judged graders runs twice more and counts on a
+majority, shown as a rate like 2/3; a regex or tool check failing counts at once. The
+merged table, one column per model, is written to
 `evals-run/<commit>/SUMMARY.md`.
 
 The hook attack suite needs no model calls and runs in seconds:

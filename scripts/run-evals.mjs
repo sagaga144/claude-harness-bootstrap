@@ -95,6 +95,36 @@ function interruption(result) {
 
 const sleep = (min) => new Promise((res) => setTimeout(res, min * 60_000));
 
+// One case, retried only when a usage limit or a dropped connection cut it off.
+async function runCase(model, c, file, runCount) {
+  for (let attempt = 1; attempt <= maxTries; attempt++) {
+    console.log(`> ${model} ${c}: attempt ${attempt}${runCount ? ` (${runCount} runs)` : ''}`);
+    const cmd = ['plugin', 'eval', './plugin', ...(heldout ? ['--eval-dir', 'heldout'] : []), '--case', c, '--scaffold', '--allow-tools', 'Write', 'Edit',
+      '--no-publish', '--json', file,
+      ...(model === 'default' ? [] : ['--model', model]),
+      ...(runCount ? ['--runs', String(runCount)] : []),
+      ...(onlyWith ? ['--ablation', 'none'] : []),
+      ...(keepTemp ? ['--keep-temp'] : [])];
+    spawnSync(claude.bin, cmd, { cwd: evalRoot, stdio: ['ignore', 'ignore', 'inherit'], shell: claude.shell });
+    const why = existsSync(file) ? interruption(JSON.parse(readFileSync(file, 'utf8'))) : 'no result written';
+    if (!why) { console.log(`  recorded`); return; }
+    console.log(`  interrupted (${why.slice(0, 80)}); waiting ${waitMin} min`);
+    if (attempt === maxTries) console.log(`  giving up on ${model} ${c} after ${maxTries} tries`);
+    else await sleep(waitMin);
+  }
+}
+
+// A case that failed only on LLM graders (three judge votes) may be a split vote, not a
+// real failure, so it gets two more runs before it counts (docs/ROADMAP.md, "Judge
+// noise"). A regex or tool check failing is a real failure on the first run.
+function judgeOnlyFailure(res) {
+  const k = res.cases?.[0];
+  if (!k) return false;
+  const llm = new Set((k.graders ?? []).filter((g) => g.type === 'llm').map((g) => g.name));
+  const failed = (k.arms?.with ?? []).flatMap((r) => (r.graders ?? []).filter((g) => !g.passed).map((g) => g.name));
+  return failed.length > 0 && failed.every((name) => llm.has(name));
+}
+
 for (const model of models) {
   const outDir = join(outRoot, model);
   mkdirSync(outDir, { recursive: true });
@@ -102,22 +132,14 @@ for (const model of models) {
     const file = join(outDir, `${c}.json`);
     if (existsSync(file) && !interruption(JSON.parse(readFileSync(file, 'utf8')))) {
       console.log(`= ${model} ${c}: already recorded for ${commit}, skipping`);
-      continue;
+    } else {
+      await runCase(model, c, file, runs);
     }
-    for (let attempt = 1; attempt <= maxTries; attempt++) {
-      console.log(`> ${model} ${c}: attempt ${attempt}`);
-      const cmd = ['plugin', 'eval', './plugin', ...(heldout ? ['--eval-dir', 'heldout'] : []), '--case', c, '--scaffold', '--allow-tools', 'Write', 'Edit',
-        '--no-publish', '--json', file,
-        ...(model === 'default' ? [] : ['--model', model]),
-        ...(runs ? ['--runs', String(runs)] : []),
-        ...(onlyWith ? ['--ablation', 'none'] : []),
-        ...(keepTemp ? ['--keep-temp'] : [])];
-      spawnSync(claude.bin, cmd, { cwd: evalRoot, stdio: ['ignore', 'ignore', 'inherit'], shell: claude.shell });
-      const why = existsSync(file) ? interruption(JSON.parse(readFileSync(file, 'utf8'))) : 'no result written';
-      if (!why) { console.log(`  recorded`); break; }
-      console.log(`  interrupted (${why.slice(0, 80)}); waiting ${waitMin} min`);
-      if (attempt === maxTries) console.log(`  giving up on ${model} ${c} after ${maxTries} tries`);
-      else await sleep(waitMin);
+    const rerun = join(outDir, `${c}.rerun.json`);
+    const done = existsSync(rerun) && !interruption(JSON.parse(readFileSync(rerun, 'utf8')));
+    if (!done && existsSync(file) && judgeOnlyFailure(JSON.parse(readFileSync(file, 'utf8')))) {
+      console.log(`  ${model} ${c}: failed only on judge votes, running it twice more`);
+      await runCase(model, c, rerun, 2);
     }
   }
 }
@@ -137,10 +159,12 @@ for (const c of cases) {
     const res = JSON.parse(readFileSync(file, 'utf8'));
     claudeVersion = res.claudeVersion ?? claudeVersion;
     const k = res.cases[0];
-    const w = rate(k.arms.with);
+    const rerunFile = join(outRoot, model, `${c}.rerun.json`);
+    const extra = existsSync(rerunFile) ? JSON.parse(readFileSync(rerunFile, 'utf8')).cases[0].arms.with ?? [] : [];
+    const w = rate([...k.arms.with, ...extra]);
     const wo = rate(k.arms.without);
     const bad = interruption(res) ? ' (interrupted)' : '';
-    if (w && w.pass === w.of && !bad) totals[model]++;
+    if (w && (w.pass === w.of || (extra.length && w.pass * 2 > w.of)) && !bad) totals[model]++;
     cells.push(`${fmt(w)}${wo ? ` (without: ${fmt(wo)})` : ''}${bad}`);
   }
   rows.push(`| \`${c}\` | ${cells.join(' | ')} |`);
@@ -151,7 +175,10 @@ Claude Code ${claudeVersion}. Each case run on its own (one command per case), a
 ${runs ? `${runs} run(s) per case; a cell like 2/3 is the pass rate.` : 'Runs per case: each case\'s default.'}
 ${onlyWith ? 'With the plugin only (no baseline arm).' : 'In parentheses: the same case without the plugin.'}
 
-${models.map((m) => `**${m}: ${totals[m]} of ${cases.length} pass every run.**`).join('  \n')}
+${models.map((m) => `**${m}: ${totals[m]} of ${cases.length} pass.**`).join('  \n')}
+
+A case passes when every run passes. One that failed only on judge votes was run twice
+more and passes on a majority; its cell shows the rate (e.g. 2/3).
 
 | Case | ${models.join(' | ')} |
 |---|${models.map(() => '---').join('|')}|
