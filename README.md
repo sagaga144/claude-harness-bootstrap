@@ -154,25 +154,53 @@ and `self-triggers-on-bare-description` now guards against it coming back.
 Coding agents get attacked through what they read: a README or an error message that says
 "run this setup script", an issue title, a poisoned tool description. Every harness this
 builds gets a security baseline for that, and
-[`scripts/test-hooks.mjs`](scripts/test-hooks.mjs) checks it: 13 attacks, each with a
+[`scripts/test-hooks.mjs`](scripts/test-hooks.mjs) checks it: 15 attacks, each with a
 harmless twin that must not be blocked, fed to a harness's real hooks from the project root
 and from a subfolder. No model calls; it runs in seconds.
 
 | | Blocked by hooks | Counting permission rules |
 |---|---|---|
-| Example harnesses from v0.5.x / v0.6.1 | 0 of 13 | 2 of 13 |
-| Example harnesses regenerated with v0.7.0 | 8 or 9 of 13 | **13 of 13** |
+| Example harnesses from v0.5.x / v0.6.1 | 0 of 15 | 2 of 15 |
+| Example harnesses regenerated with v0.7.0 | 10 or 11 of 15 | **15 of 15** |
+| The hooks the spec gives every v0.8.0 harness | **12 of 15** | **15 of 15** |
 
-What the 13 are: piping a download into a shell (Bash and PowerShell), DNS exfiltration,
+What the 15 are: piping a download into a shell (Bash and PowerShell), DNS exfiltration,
 an inline network call from a script, a setup script planted in a dependency, reading
-`.env` from the shell, a push-guard bypass (`git -C . push`), and five ways of disabling the
+`.env` from the shell, a push-guard bypass (`git -C . push`), five ways of disabling the
 harness itself (editing a guard, overwriting settings, `sed -i` on a hook, a redirect into
-settings, switching hooks off), plus an override smuggled into the command text. Full
-matrix: [`docs/baselines/hooks-v0.7.0.md`](docs/baselines/hooks-v0.7.0.md).
+settings, switching hooks off), an override smuggled into the command text, and, from
+v0.8, rewriting the harness's version stamp or forging its friction log. The three left to
+permission rules (editing a guard, overwriting settings, switching hooks off through
+Edit/Write) are also how you change your own harness, so they ask you rather than block.
+Full matrix: [`docs/baselines/hooks-v0.8.0.md`](docs/baselines/hooks-v0.8.0.md).
 
 On macOS, Linux and WSL2 the generated `settings.json` also turns on Claude Code's sandbox,
 which limits what any shell command can write and reach. Native Windows has no sandbox,
 and the generated `CLAUDE.md` says so.
+
+## Keeping it current
+
+A harness is written for the code as it was on day one. Code moves on: a database
+arrives, an agent gets deleted, Claude Code changes how hooks run. Each harness built by
+v0.8 or later keeps two small records:
+
+- **`.claude/harness.json`**, a version stamp: which plugin version built it, from which
+  project traits, and which files it wrote. Never your own description.
+- **`.claude/session-data/friction.jsonl`**, one line per guard decision: when, which
+  guard, and whether it blocked, was overridden or failed. Never the command, never a path.
+  It stays on your machine (gitignored).
+
+Both are protected like the rest of the harness. Then, in the project:
+
+```
+/harness-bootstrap:check
+```
+
+It compares the harness with the code and the plugin as they are now, re-tests each guard,
+and reads the friction log for guards that get in the way or have broken. It reports what
+it found and proposes one fix, then asks; it never changes the harness on its own. Run it
+after a big change to the codebase or a Claude Code update. It works on harnesses built
+before v0.8, and on ones this plugin didn't build, by inferring what it can.
 
 ## Why not a template pack?
 
