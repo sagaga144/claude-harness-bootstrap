@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.8.0 (unreleased)
+
+Keeping a harness current. A harness now knows what built it, and a second skill tells
+you when it has drifted from the code.
+
+- **`/harness-bootstrap:check`**, a second skill: audits an existing harness against the
+  code and the plugin as they are now (stale `CLAUDE.md` entries, traits the code gained
+  since setup, guards that no longer block, a missing security baseline, noisy or broken
+  guards, overlap with Claude Code built-ins) and proposes one fix, then asks. It never
+  applies changes on its own. It works on harnesses this plugin didn't build.
+- **A version stamp** (`.claude/harness.json`): the plugin version, the project's traits
+  (never your own description) and the files written. **A friction log**
+  (`.claude/session-data/friction.jsonl`): one line per guard decision with exactly four
+  fields, never a command or a path. Both are protected like the rest of the harness.
+  The spec for both is the new `plugin/skills/init/LIFECYCLE.md`.
+- **Hooks now stop two attacks that only permission rules stopped before.** The
+  remote-exec guard blocks reading a `.env` file through the shell (`less`, `grep`,
+  `source`, `< .env`, an inline `node -e` or `python -c`), not only PowerShell's; the
+  harness guard also catches `sed -i`, `cp`, `mv`, `rm` and similar aimed at harness files.
+  `.env.example` stays readable, and commands that only name `.env` still run.
+
+**Measured**
+
+- Attack suite: 15 attacks (two new: rewriting the stamp, forging the friction log). The
+  hooks every v0.8.0 harness gets block 12 of 15 (v0.7.1: 8 of 13), 15 of 15 counting
+  permission rules, with no harmless twin blocked and every friction-log line clean
+  ([matrix](docs/baselines/hooks-v0.8.0.md)).
+- Evals: two new cases for the check skill (14 in total). Every LLM-judged grader now has
+  criteria a judge can't read two ways, so scores before and after 0.8.0 aren't strictly
+  comparable on those graders.
+
 ## 0.7.1 (2026-10-14)
 
 A setup finishes, and protects itself, even when it can't write everything. **12 of 12 on
