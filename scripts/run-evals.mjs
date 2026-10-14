@@ -10,6 +10,9 @@
 //   node scripts/run-evals.mjs --major         # Haiku, Sonnet, Opus, Fable; both arms; 3 runs each
 //   node scripts/run-evals.mjs --heldout C:/path/to/heldout-evals --model sonnet --runs 3
 //   node scripts/run-evals.mjs --wait-min 20 --max-tries 12
+//   node scripts/run-evals.mjs --model haiku --model sonnet --model opus --runs 1 --reuse e117b17
+//                                              # reuse another commit's results if plugin/ is identical;
+//                                              # a case with only a with-plugin result gets its no-plugin arm run alone
 //   node scripts/run-evals.mjs --release --keep-temp   # keep each session's files and trace
 //                                                      # (in TEMP: point it somewhere readable)
 //
@@ -96,14 +99,15 @@ function interruption(result) {
 const sleep = (min) => new Promise((res) => setTimeout(res, min * 60_000));
 
 // One case, retried only when a usage limit or a dropped connection cut it off.
-async function runCase(model, c, file, runCount) {
+// `target` is the plugin to load; `oneArm` runs it alone, with no comparison arm.
+async function runCase(model, c, file, runCount, target = './plugin', oneArm = onlyWith) {
   for (let attempt = 1; attempt <= maxTries; attempt++) {
-    console.log(`> ${model} ${c}: attempt ${attempt}${runCount ? ` (${runCount} runs)` : ''}`);
-    const cmd = ['plugin', 'eval', './plugin', ...(heldout ? ['--eval-dir', 'heldout'] : []), '--case', c, '--scaffold', '--allow-tools', 'Write', 'Edit',
+    console.log(`> ${model} ${c}${target === './plugin' ? '' : ' (without the plugin)'}: attempt ${attempt}${runCount ? ` (${runCount} runs)` : ''}`);
+    const cmd = ['plugin', 'eval', target, ...(heldout ? ['--eval-dir', 'heldout'] : []), '--case', c, '--scaffold', '--allow-tools', 'Write', 'Edit',
       '--no-publish', '--json', file,
       ...(model === 'default' ? [] : ['--model', model]),
       ...(runCount ? ['--runs', String(runCount)] : []),
-      ...(onlyWith ? ['--ablation', 'none'] : []),
+      ...(oneArm ? ['--ablation', 'none'] : []),
       ...(keepTemp ? ['--keep-temp'] : [])];
     spawnSync(claude.bin, cmd, { cwd: evalRoot, stdio: ['ignore', 'ignore', 'inherit'], shell: claude.shell });
     const why = existsSync(file) ? interruption(JSON.parse(readFileSync(file, 'utf8'))) : 'no result written';
@@ -125,6 +129,39 @@ function judgeOnlyFailure(res) {
   return failed.length > 0 && failed.every((name) => llm.has(name));
 }
 
+// --reuse <commit>: take the results already recorded for another commit, but only when
+// its plugin/ folder is identical to this one (a docs-only commit since then, say), so a
+// result is never counted for a plugin it didn't test.
+const reuse = opt('--reuse');
+if (reuse) {
+  try { execFileSync('git', ['diff', '--quiet', reuse, '--', 'plugin']); } catch {
+    throw new Error(`--reuse ${reuse}: its plugin/ folder differs from this checkout's, so its results don't apply here`);
+  }
+  if (dirty) throw new Error('--reuse: plugin/ has uncommitted changes');
+  for (const model of models) {
+    const from = join(root, 'evals-run', reuse, model);
+    if (!existsSync(from)) continue;
+    mkdirSync(join(outRoot, model), { recursive: true });
+    for (const f of readdirSync(from)) {
+      if (!existsSync(join(outRoot, model, f))) { cpSync(join(from, f), join(outRoot, model, f)); console.log(`= ${model} ${f}: reused from ${reuse}`); }
+    }
+  }
+}
+
+// The no-plugin arm on its own, for a case whose with-plugin result is already recorded
+// (claude plugin eval runs "with" alone or both arms, never "without" alone). It loads a
+// stand-in plugin that has only a manifest and the eval cases, no skills.
+let baselinePlugin = null;
+function standIn() {
+  if (baselinePlugin) return baselinePlugin;
+  baselinePlugin = join(root, 'hooks-run', 'baseline-plugin');
+  rmSync(baselinePlugin, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  mkdirSync(join(baselinePlugin, '.claude-plugin'), { recursive: true });
+  writeFileSync(join(baselinePlugin, '.claude-plugin', 'plugin.json'), JSON.stringify({ name: 'no-plugin-baseline', version: '0.0.0', description: 'Stand-in with no skills, for the no-plugin eval arm.' }, null, 2));
+  cpSync(join(root, 'plugin', 'evals'), join(baselinePlugin, 'evals'), { recursive: true, filter: (src) => !/[\\/]evals[\\/]results/.test(src) });
+  return baselinePlugin;
+}
+
 for (const model of models) {
   const outDir = join(outRoot, model);
   mkdirSync(outDir, { recursive: true });
@@ -134,6 +171,12 @@ for (const model of models) {
       console.log(`= ${model} ${c}: already recorded for ${commit}, skipping`);
     } else {
       await runCase(model, c, file, runs);
+    }
+    const without = join(outDir, `${c}.without.json`);
+    const hasWithout = (f) => existsSync(f) && (JSON.parse(readFileSync(f, 'utf8')).cases?.[0]?.arms?.without?.length ?? 0) > 0;
+    const withoutDone = existsSync(without) && !interruption(JSON.parse(readFileSync(without, 'utf8')));
+    if (!onlyWith && !heldout && existsSync(file) && !hasWithout(file) && !withoutDone) {
+      await runCase(model, c, without, runs, standIn(), true);
     }
     const rerun = join(outDir, `${c}.rerun.json`);
     const done = existsSync(rerun) && !interruption(JSON.parse(readFileSync(rerun, 'utf8')));
@@ -162,7 +205,13 @@ for (const c of cases) {
     const rerunFile = join(outRoot, model, `${c}.rerun.json`);
     const extra = existsSync(rerunFile) ? JSON.parse(readFileSync(rerunFile, 'utf8')).cases[0].arms.with ?? [] : [];
     const w = rate([...k.arms.with, ...extra]);
-    const wo = rate(k.arms.without);
+    // A no-plugin arm run on its own is scored as claude plugin eval scores its own: the
+    // check that the plugin's skill fired doesn't count, since it can't pass without it.
+    const withoutFile = join(outRoot, model, `${c}.without.json`);
+    const alone = existsSync(withoutFile) ? JSON.parse(readFileSync(withoutFile, 'utf8')).cases[0] : null;
+    const pluginOnly = new Set((alone?.graders ?? []).filter((g) => g.type === 'tool_used' && g.config?.tool === 'Skill').map((g) => g.name));
+    const rescored = (alone?.arms.with ?? []).map((r) => ({ passed: (r.graders ?? []).every((g) => g.passed || pluginOnly.has(g.name)) }));
+    const wo = rate(k.arms.without?.length ? k.arms.without : rescored);
     const bad = interruption(res) ? ' (interrupted)' : '';
     if (w && (w.pass === w.of || (extra.length && w.pass * 2 > w.of)) && !bad) totals[model]++;
     cells.push(`${fmt(w)}${wo ? ` (without: ${fmt(wo)})` : ''}${bad}`);
@@ -173,7 +222,7 @@ const summary = `# Eval results for ${commit}${dirty ? ' (uncommitted plugin cha
 
 Claude Code ${claudeVersion}. Each case run on its own (one command per case), all on this commit.
 ${runs ? `${runs} run(s) per case; a cell like 2/3 is the pass rate.` : 'Runs per case: each case\'s default.'}
-${onlyWith ? 'With the plugin only (no baseline arm).' : 'In parentheses: the same case without the plugin.'}
+${onlyWith ? 'With the plugin only (no baseline arm).' : 'In parentheses: the same case without the plugin. Where the with-plugin result came first, the no-plugin arm ran on its own with a stand-in plugin that has no skills, scored like claude plugin eval scores its own (the skill-fired check left out).'}
 
 ${models.map((m) => `**${m}: ${totals[m]} of ${cases.length} pass.**`).join('  \n')}
 
