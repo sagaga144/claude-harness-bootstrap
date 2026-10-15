@@ -1,4 +1,4 @@
-# Hook attack matrix (1b470d6, 2026-10-14)
+# Hook attack matrix (c128b51, 2026-10-14)
 
 Each cell: result from the project root, then from `src/` (after a `cd`).
 `B` blocked · `-` allowed · `E` hook errored (Claude Code fails open, so not blocked) · `·` no hook for this tool · `?` only non-command hooks.

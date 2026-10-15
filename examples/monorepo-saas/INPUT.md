@@ -9,7 +9,7 @@
 1. Cost vs. thoroughness: **Keep cost low** (recommended to start)
 2. How much to build now: **Just the essentials for now** (recommended to start)
 
-**Generated with:** harness-bootstrap v0.8.0 (commit `1b470d6`), in a fresh empty folder,
+**Generated with:** harness-bootstrap v0.8.0 (commit `c128b51`), in a fresh empty folder,
 by `scripts/generate-example.mjs` on Sonnet: a real Claude Code session (46 turns, about
 $0.83) whose permission prompts were answered by a fixed policy (reads inside this
 repository, writes only inside the project folder, no network or install commands) instead

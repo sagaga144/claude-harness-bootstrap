@@ -233,7 +233,7 @@ for (const c of cases) {
     const alone = existsSync(withoutFile) ? JSON.parse(readFileSync(withoutFile, 'utf8')).cases[0] : null;
     // Combine both files' grader lists: a plugin-only run doesn't record the `arm` field.
     const defs = [...(k.graders ?? []), ...(alone?.graders ?? [])];
-    const pluginOnly = new Set(defs.filter((g) => (g.type === 'tool_used' && g.config?.tool === 'Skill') || g.arm === 'with-only').map((g) => g.name));
+    const pluginOnly = new Set(defs.filter((g) => (g.type === 'tool_used' && g.config?.tool === 'Skill') || (g.arm ?? g.config?.arm) === 'with-only').map((g) => g.name));
     const baselineRuns = k.arms.without?.length ? k.arms.without : (alone?.arms.with ?? []);
     const rescored = baselineRuns.map((r) => ({ passed: !r.error && (r.graders ?? []).length > 0 && r.graders.every((g) => g.passed || pluginOnly.has(g.name)) }));
     // A case whose only checks are plugin-only has nothing to score without the plugin.
