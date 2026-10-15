@@ -226,15 +226,18 @@ for (const c of cases) {
     const rerunFile = join(outRoot, model, `${c}.rerun.json`);
     const extra = existsSync(rerunFile) ? JSON.parse(readFileSync(rerunFile, 'utf8')).cases[0].arms.with ?? [] : [];
     const w = rate([...k.arms.with, ...extra]);
-    // A no-plugin arm run on its own is scored as claude plugin eval scores its own: the
-    // check that the plugin's skill fired doesn't count, since it can't pass without it.
+    // Every no-plugin arm, whether claude plugin eval ran it beside the plugin arm or it ran
+    // alone with the stand-in, is scored by one rule: the checks that can only pass with the
+    // plugin (the skill firing, and graders marked `arm: with-only`) don't count.
     const withoutFile = join(outRoot, model, `${c}.without.json`);
     const alone = existsSync(withoutFile) ? JSON.parse(readFileSync(withoutFile, 'utf8')).cases[0] : null;
-    const pluginOnly = new Set((alone?.graders ?? []).filter((g) => g.type === 'tool_used' && g.config?.tool === 'Skill').map((g) => g.name));
-    const rescored = (alone?.arms.with ?? []).map((r) => ({ passed: (r.graders ?? []).every((g) => g.passed || pluginOnly.has(g.name)) }));
-    // A case whose only check is the skill firing has nothing to score without the plugin.
-    const nothingLeft = alone && (alone.graders ?? []).every((g) => pluginOnly.has(g.name));
-    const wo = nothingLeft ? 'n/a' : rate(k.arms.without?.length ? k.arms.without : rescored);
+    const defs = k.graders ?? alone?.graders ?? [];
+    const pluginOnly = new Set(defs.filter((g) => (g.type === 'tool_used' && g.config?.tool === 'Skill') || g.arm === 'with-only').map((g) => g.name));
+    const baselineRuns = k.arms.without?.length ? k.arms.without : (alone?.arms.with ?? []);
+    const rescored = baselineRuns.map((r) => ({ passed: !r.error && (r.graders ?? []).length > 0 && r.graders.every((g) => g.passed || pluginOnly.has(g.name)) }));
+    // A case whose only checks are plugin-only has nothing to score without the plugin.
+    const nothingLeft = baselineRuns.length > 0 && defs.every((g) => pluginOnly.has(g.name));
+    const wo = nothingLeft ? 'n/a' : rate(rescored);
     const bad = interruption(res) ? ' (interrupted)' : '';
     if (w && (w.pass === w.of || (extra.length && w.pass * 2 > w.of)) && !bad) totals[model]++;
     cells.push(`${fmt(w)}${wo ? ` (without: ${fmt(wo)})` : ''}${bad}`);
@@ -259,4 +262,4 @@ ${rows.join('\n')}
 mkdirSync(outRoot, { recursive: true });
 writeFileSync(join(outRoot, 'SUMMARY.md'), summary);
 console.log('\n' + summary);
-if (!go) console.log(planned === 0 ? 'Nothing to run: every case is recorded for this plugin.' : `Dry run: ${planned} session(s) would start. Nothing was run; add --go to start them.`);
+if (!go) console.log(planned === 0 ? 'Nothing to run: every case is recorded for this plugin.' : `Dry run: ${planned} session(s) would start, plus up to 2 more for each with-plugin case whose judges split (the judge-noise rerun). Nothing was run; add --go to start them.`);
