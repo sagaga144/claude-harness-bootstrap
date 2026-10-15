@@ -231,12 +231,13 @@ for (const c of cases) {
     // plugin (the skill firing, and graders marked `arm: with-only`) don't count.
     const withoutFile = join(outRoot, model, `${c}.without.json`);
     const alone = existsSync(withoutFile) ? JSON.parse(readFileSync(withoutFile, 'utf8')).cases[0] : null;
-    const defs = k.graders ?? alone?.graders ?? [];
+    // Combine both files' grader lists: a plugin-only run doesn't record the `arm` field.
+    const defs = [...(k.graders ?? []), ...(alone?.graders ?? [])];
     const pluginOnly = new Set(defs.filter((g) => (g.type === 'tool_used' && g.config?.tool === 'Skill') || g.arm === 'with-only').map((g) => g.name));
     const baselineRuns = k.arms.without?.length ? k.arms.without : (alone?.arms.with ?? []);
     const rescored = baselineRuns.map((r) => ({ passed: !r.error && (r.graders ?? []).length > 0 && r.graders.every((g) => g.passed || pluginOnly.has(g.name)) }));
     // A case whose only checks are plugin-only has nothing to score without the plugin.
-    const nothingLeft = baselineRuns.length > 0 && defs.every((g) => pluginOnly.has(g.name));
+    const nothingLeft = baselineRuns.length > 0 && defs.length > 0 && defs.every((g) => pluginOnly.has(g.name));
     const wo = nothingLeft ? 'n/a' : rate(rescored);
     const bad = interruption(res) ? ' (interrupted)' : '';
     if (w && (w.pass === w.of || (extra.length && w.pass * 2 > w.of)) && !bad) totals[model]++;
