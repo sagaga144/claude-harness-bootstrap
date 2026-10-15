@@ -180,7 +180,7 @@ for (const model of models) {
     const done = existsSync(rerun) && !interruption(JSON.parse(readFileSync(rerun, 'utf8')));
     if (!done && existsSync(file) && judgeOnlyFailure(JSON.parse(readFileSync(file, 'utf8')))) {
       console.log(`  ${model} ${c}: failed only on judge votes, running it twice more`);
-      await runCase(model, c, rerun, 2);
+      await runCase(model, c, rerun, 2, './plugin', true); // the no-plugin arm isn't what's in doubt
     }
   }
 }
