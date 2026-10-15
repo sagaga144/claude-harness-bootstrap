@@ -10,7 +10,9 @@ Check each condition. PASS only if all four hold; FAIL if any one doesn't.
 2. It has no unfilled placeholder: no stand-in in angle or square brackets for a value
    the author should have filled in (such as `<pkg>`, `<project name>`, `[your stack]`),
    and no `TODO`, `TBD` or `FIXME`. Markdown links, HTML tags and command options like
-   `--help` are not placeholders.
+   `--help` are not placeholders, and neither is a stand-in for a value nobody can know
+   when the harness is set up, such as a future release's version (`==<version>`) or an
+   argument the user supplies each time (`<file>`).
 3. The stack it states names Python, and the file says the package is published (to PyPI
    or as a public library other projects depend on).
 4. Every test, lint or build command it lists is a Python-ecosystem command (for example
