@@ -18,15 +18,17 @@
 //   node scripts/run-evals.mjs --release --keep-temp --temp C:/path/eval-tmp
 //                                              # keep each session's files and trace, in that folder
 //
-// Results: evals-run/plugin-<tree>/<model>/<case>.json plus SUMMARY.md there, where <tree>
-// is the git hash of the plugin/ folder: a commit that only touches docs or scripts keeps
-// the same folder, so nothing is run twice for the same plugin. A case already recorded
-// for this plugin and model
-// without errors is skipped, so re-running after an interruption picks up where it
+// Results: evals-run/plugin-<hash>/<model>/<case>.json plus SUMMARY.md there, where <hash>
+// covers everything in plugin/ except evals/, and <case>.case records the git hash of that
+// case's own folder. A docs or script commit re-runs nothing; editing one case's grader
+// re-runs that case only; changing the skill re-runs everything. A case already recorded
+// for this plugin, case version and model without errors is skipped, so re-running after
+// an interruption picks up where it
 // left off. With no --model, the account's default model runs, filed under "default".
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 
 const args = process.argv.slice(2);
@@ -56,7 +58,12 @@ const git = (...a) => execFileSync('git', a).toString().trim();
 const root = git('rev-parse', '--show-toplevel');
 const commit = git('rev-parse', '--short', 'HEAD');
 const dirty = git('status', '--porcelain', '--', 'plugin') !== '';
-const pluginTree = git('rev-parse', '--short', 'HEAD:plugin');
+// A result depends on the plugin itself (skills, manifest: everything but evals/) and on
+// its own case's folder. Results are filed under the first and checked against the second,
+// so editing one case's grader re-runs that case only, and a docs commit re-runs nothing.
+const pluginEntries = git('ls-tree', 'HEAD', 'plugin/').split('\n').filter((l) => !/\tplugin\/evals$/.test(l)).join('\n');
+const pluginTree = createHash('sha1').update(pluginEntries).digest('hex').slice(0, 7);
+const caseTree = (c) => { try { return git('rev-parse', '--short', `HEAD:plugin/evals/${c}`); } catch { return 'none'; } };
 
 // On Windows, npm installs claude as a .cmd shim, which Node can only start through a
 // shell. Find the executable the shim wraps and run that instead, so the eval arguments
@@ -165,6 +172,22 @@ for (const model of models) {
   mkdirSync(outDir, { recursive: true });
   for (const c of cases) {
     const file = join(outDir, `${c}.json`);
+    // Results recorded against an older version of this case's own folder (a grader
+    // changed, say) are set aside, so the case runs again; other cases keep theirs.
+    const marker = join(outDir, `${c}.case`);
+    if (existsSync(file) && (!existsSync(marker) || readFileSync(marker, 'utf8').trim() !== caseTree(c))) {
+      const stale = join(outDir, 'stale', existsSync(marker) ? readFileSync(marker, 'utf8').trim() : 'unknown');
+      console.log(`  ${model} ${c}: the case changed since its results were recorded; setting them aside`);
+      if (go) {
+        mkdirSync(stale, { recursive: true });
+        for (const f of readdirSync(outDir)) if (f.startsWith(`${c}.`)) renameSync(join(outDir, f), join(stale, f));
+      } else {
+        planned += Number(runs ?? 1) * (onlyWith ? 1 : 2);
+        console.log(`would run: ${model} ${c} again${onlyWith ? '' : ' (with and without the plugin)'}`);
+        continue;
+      }
+    }
+    if (go) writeFileSync(marker, caseTree(c));
     if (existsSync(file) && !interruption(JSON.parse(readFileSync(file, 'utf8')))) {
       console.log(`= ${model} ${c}: already recorded for plugin ${pluginTree}, skipping`);
     } else {
