@@ -1,9 +1,9 @@
 # Changelog
 
-## 0.8.0 (unreleased)
+## 0.8.0 (2026-10-16)
 
 Keeping a harness current. A harness now knows what built it, and a second skill tells
-you when it has drifted from the code.
+you when it has drifted from the code. **14 of 14 on Haiku, Sonnet and Opus.**
 
 - **`/harness-bootstrap:check`**, a second skill: audits an existing harness against the
   code and the plugin as they are now (stale `CLAUDE.md` entries, traits the code gained
@@ -30,9 +30,19 @@ you when it has drifted from the code.
 - Three examples regenerated with v0.8.0 (monorepo-saas, terraform-aws-infra,
   desktop-notes-app), each with its stamp and friction log, copied as generated with no
   edits: 12 of 15 attacks blocked by hooks, 15 of 15 counting rules.
-- Evals: two new cases for the check skill (14 in total). Every LLM-judged grader now has
-  criteria a judge can't read two ways, so scores before and after 0.8.0 aren't strictly
-  comparable on those graders.
+- Evals ([details](docs/baselines/evals-v0.8.0.md)): **14 of 14 on Haiku, Sonnet and Opus**
+  with the plugin, one run per case; without it, plain Claude Code passes 5, 4 and 6 of
+  the 13 cases that can be scored without the plugin. Two new cases for the check skill
+  (14 in total). Fable isn't in this run. Every LLM-judged grader now has criteria a judge
+  can't read two ways, so scores on those graders aren't strictly comparable with earlier
+  releases. Two graders were corrected after Opus missed them on wording, and both re-ran
+  on all three models: `published-library-semver` also accepts a rule that a breaking
+  change needs a major version, and the leanness graders no longer count a stand-in for a
+  future version number (`==<version>`) as an unfilled placeholder.
+- Eval tooling: `run-evals.mjs` starts no model session without `--go` (without it, it
+  lists what would run), files results by the plugin's content so a docs commit re-runs
+  nothing and a grader edit re-runs only its case, and can run the no-plugin arm alone.
+  `trace-case.mjs` and `generate-example.mjs` also need `--go`.
 
 ## 0.7.1 (2026-10-14)
 

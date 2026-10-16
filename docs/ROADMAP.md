@@ -13,7 +13,7 @@ kept separately.
 | v0.6.2 | **Released.** Hook paths anchored, timeouts in seconds |
 | 1 v0.7 | **Released** as v0.7.0 (2026-10-12): Haiku 9 of 12, Sonnet 9 of 12 (v0.6.1: 3 of 8, 3 of 6); hooks block 8 of 13 attacks, 13 of 13 counting rules ([`hooks-v0.7.0.md`](baselines/hooks-v0.7.0.md)). In the plugin directory it passed every scan and waits for an Anthropic reviewer to publish |
 | v0.7.1 | **Released** on GitHub (2026-10-14): 12 of 12 on Haiku and on Sonnet ([`evals-v0.7.1.md`](baselines/evals-v0.7.1.md)). A patch release, not in the original plan: a setup that can't write into `.claude/` still writes `CLAUDE.md`, tries each security file and reports what's missing. The directory's scanner refused to fetch its commit with an error that matches nothing in it; a fresh commit (`5009637`, docs only) is waiting for the scanner's next try |
-| 2 v0.8 | **In progress** on `release/0.8.0`, cut from `main` after v0.7.1. Steps 2.2 to 2.6 done; version 0.8.0; README and CHANGELOG drafted. The Haiku + Sonnet run is going. Left: fixes from that run, regenerated examples, the major run (asked first: about 336 sessions), release |
+| 2 v0.8 | **Ready to release** on `release/0.8.0`: 14 of 14 on Haiku, Sonnet and Opus with the plugin (plain Claude Code: 5, 4 and 6 of 13); hooks block 12 of 15 attacks, 15 of 15 counting rules ([`evals-v0.8.0.md`](baselines/evals-v0.8.0.md), [`hooks-v0.8.0.md`](baselines/hooks-v0.8.0.md)). Fable left out (not on the account's plan) |
 | 3 v0.9 | Written on `roadmap/phase-0-baseline` before v0.7 shipped, not eval-tested: supply-chain `ask` rules, security-tooling type with scope guard, 2 eval cases. Carried over to its own release branch after v0.8, like v0.8's work was |
 | 4 v0.10 | Written on `roadmap/phase-0-baseline`, not eval-tested: built-ins table, `/ready` rename, bug-fix pipeline, long-running kit, script pattern, 3 eval cases |
 | 5 v1.0 | Written on `roadmap/phase-0-baseline`, not eval-tested: held-out set (7 cases, in `harness-qa/heldout-evals`), `/harness-bootstrap:tune`, `scripts/improve-loop.mjs`. No real loop round run yet |
@@ -551,11 +551,15 @@ comparable with earlier releases.
   records) and `/harness-check`.
 - Regenerate the examples so they carry the stamp.
 
-**Status: in progress.** Version 0.8.0, README section "Keeping it current", the 15-attack
-matrix (`docs/baselines/hooks-v0.8.0.md`) and a CHANGELOG draft are written. The Haiku +
-Sonnet run is going, to catch problems before the major run. Left: fixes from that run,
-regenerated examples, the major run (asked first),
-`docs/baselines/evals-v0.8.0.md`, release.
+**Status: done, ready to release.** The major run used Haiku, Sonnet and Opus (Fable
+isn't on the account's plan), one run per case, both arms, about 105 sessions in all
+(re-runs included) instead of the planned 336: the Haiku and Sonnet with-plugin results
+came from the release check on the identical plugin, and `run-evals.mjs` now files
+results by the plugin's content, so only what changed re-runs. All three models pass 14
+of 14; plain Claude Code passes 5, 4 and 6 of 13. Two graders were corrected after Opus
+missed them on wording and re-ran on all three models (see
+[`evals-v0.8.0.md`](baselines/evals-v0.8.0.md)). The examples carry the stamp. Left: the
+release itself.
 
 **Done when:** `/harness-check` finds the planted drift in its eval fixture on Sonnet, and
 the friction log is verified to contain only the four allowed fields.
