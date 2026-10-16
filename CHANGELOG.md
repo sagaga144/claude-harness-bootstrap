@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.9.0 (unreleased)
+## 0.9.0 (2026-10-17)
 
 Security, part 2: what comes into the project, and projects whose job is security.
 **16 of 16 on Haiku and Sonnet.**
