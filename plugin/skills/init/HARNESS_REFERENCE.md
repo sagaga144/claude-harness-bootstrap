@@ -694,7 +694,7 @@ Also read `settings.json`'s `hooks` block directly — that's the source of trut
 
 Before writing the HTML, **load the `artifact-design` skill** — this is a real published Artifact, not a throwaway doc, and it deserves a real design pass, not a Markdown dump. Decide:
 
-- **Palette**: if the project has its own design tokens (a `tokens.css` or theme file), pull the actual accent/background values so the manual visually matches the product it documents. Otherwise pick one warm, high-contrast accent and build a full light + dark pair around it (see the CSS skeleton below — it already encodes the light/dark/`data-theme` contract the Artifact runtime expects).
+- **Palette**: if the project has its own design tokens (a `tokens.css` or theme file), pull the actual accent/background values so the manual visually matches the product it documents. Otherwise pick one warm, high-contrast accent and build a full light + dark pair around it (the `artifact-design` skill gives the light/dark/`data-theme` contract the Artifact runtime expects).
 - **Voice**: second person, terse, confident — "You built X. The good news: you rarely name any of it." Not marketing copy.
 - **Length**: one scrollable page, no pagination. Dense but scannable — tables and card grids, not paragraphs.
 
@@ -714,86 +714,24 @@ This is the shape that worked — reuse it, filling each section from the real i
 
 Footer: any manual step still on the human (restart the CLI to load new hooks, open an external vault, etc.) — be honest about what isn't automatic yet.
 
-### 2.5 Reusable HTML/CSS skeleton
+### 2.5 Layout
 
-This is the actual structural + style skeleton the reference implementation used, generalized. Copy it into a scratch `.html` file, then fill every `{{PLACEHOLDER}}` and each `<!-- SECTION -->` block from your real inventory. Swap the CSS custom properties in `:root` for the project's own palette if it has one; otherwise this warm-neutral/amber pair is a safe brand-neutral default matching the Artifact dark/light contract.
+Build the page yourself, following the `artifact-design` skill (its light/dark tokens and
+theme contract, which the Artifact runtime expects). What the reference manual used:
 
-```html
-<title>{{Project}} Harness — Operator's Manual</title>
-<style>
-  :root {
-    --bg:#faf7ef; --surface:#fffdf8; --surface-2:#f4ecdb; --border:#e6dcc6;
-    --text:#1c1712; --muted:#6f6555; --accent:#a7690a; --accent-fill:#fbbf24; --accent-strong:#e07b00;
-    --good:#15803d; --warn:#b45309; --bad:#b3261d;
-    --mono:ui-monospace,"Cascadia Code","SF Mono",Menlo,Consolas,monospace;
-    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  }
-  @media (prefers-color-scheme:dark){:root{
-    --bg:#0b0a07; --surface:#15120c; --surface-2:#1e1a12; --border:#2d271b;
-    --text:#f3eede; --muted:#a89d86; --accent:#fbbf24; --accent-strong:#ff9800;
-  }}
-  :root[data-theme="light"]{ /* repeat the light block explicitly */ }
-  :root[data-theme="dark"]{ /* repeat the dark block explicitly — the toggle must win both ways */ }
-
-  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;}
-  .wrap{max-width:1120px;margin:0 auto;padding:clamp(20px,4vw,52px) clamp(16px,4vw,40px) 90px;}
-  h2{font-size:13px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.12em;color:var(--muted);
-     margin:46px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border);}
-  .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;}
-  .mode{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:20px;position:relative;}
-  .mode::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;}
-  .mode.auto::before{background:var(--good);} .mode.route::before{background:var(--accent-strong);} .mode.invoke::before{background:var(--warn);}
-  .tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface);}
-  table{border-collapse:collapse;width:100%;font-size:14px;min-width:520px;}
-  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);}
-  th{font-family:var(--mono);font-size:11px;text-transform:uppercase;color:var(--muted);background:var(--surface-2);}
-  .groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;}
-  .grp{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:18px 20px;}
-  .plays{display:flex;flex-direction:column;gap:10px;}
-  .play{display:grid;grid-template-columns:minmax(160px,1fr) 2fr;gap:14px;align-items:center;
-        background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent-strong);
-        border-radius:11px;padding:13px 16px;}
-  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-  @media (max-width:720px){.cols{grid-template-columns:1fr;} .play{grid-template-columns:1fr;}}
-</style>
-
-<div class="wrap">
-  <header>
-    <h1>How to drive <span class="amp">{{Project}}</span>'s harness</h1>
-    <p class="lede">{{one-paragraph summary with the real counts: N agents, N commands, N skills, N rules, N hooks}}</p>
-  </header>
-
-  <h2>01 The one idea: three ways it acts</h2>
-  <!-- three .mode cards: auto / route / invoke, each with a one-line example -->
-
-  <h2>02 What runs automatically</h2>
-  <!-- .tablewrap table: When | What fires | Effect — one row per lifecycle event -->
-
-  <h2>03 Just describe it — the router picks the tool</h2>
-  <!-- .tablewrap table: If you say… | It runs — 8-10 real rows from the Intent Router -->
-
-  <h2>04 The toolbox — when you want to name it</h2>
-  <!-- .groups grid of .grp cards, grouped by workflow goal -->
-
-  <h2>05 Memory</h2>
-  <!-- short note on built-in auto memory for the common case; a real table only if the
-       project built the optional team-sync mirror — omit the whole section otherwise -->
-
-  <h2>06 Playbooks — say this, get that</h2>
-  <!-- .plays list of .play rows: When | Do this -->
-
-  <h2>07 Escape hatches & habits that maximize it</h2>
-  <!-- .cols: left card = env var overrides, right card = compounding habits -->
-
-  <footer><p>{{honest footer — what's still manual, if anything}}</p></footer>
-</div>
-```
+- A header: `How to drive <Project>'s harness`, then a one-paragraph lede with the real
+  counts (agents, commands, skills, rules, hooks).
+- One card or table per §2.4 section, numbered 01 to 07, in that order.
+- Commands, hook and agent names in a monospace face; what the user would type set apart
+  as quoted phrases, never raw hook names.
+- Section 07 as two columns (overrides, habits), then the honest footer.
+- No leftover template text: every count, name and row comes from the 2.2 inventory.
 
 ### 2.6 Publishing
 
-1. Write the filled-in HTML to a scratch file (the scratchpad directory, not the repo — this is a published artifact, not a tracked source file).
-2. Call the Artifact tool: `file_path` = that scratch file, `title` = "`{{Project}} Harness — Operator's Manual`" (a name, not a summary), `description` = one sentence, `favicon` = 1-2 emoji fitting the project's domain (pick something the user will recognize instantly in a tab full of other artifacts).
-3. On any later update, republish the **same** `file_path`/`url` — never a new one — and omit `favicon` so the tab icon stays stable. Recount the inventory (2.2) before every redeploy so the numbers in the header stay honest.
+1. Write the page to a scratch `.html` file (the scratchpad directory, not the repo — this is a published artifact, not a tracked source file).
+2. Call the Artifact tool: `file_path` = that scratch file, a `<title>` naming it ("`<Project>` Operator's Manual"), `description` = one sentence, and `icon` = one short generic word for the tab (`guide`, say).
+3. On any later update, republish the **same** `file_path`/`url` — never a new one — and omit `icon` so the tab icon stays stable. Recount the inventory (2.2) before every redeploy so the numbers in the header stay honest.
 
 ### 2.7 Keep it honest
 
