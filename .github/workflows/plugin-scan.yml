@@ -1,0 +1,37 @@
+name: plugin-scan
+
+# Scans the repository with HOL's AI Plugin Scanner
+# (https://github.com/hashgraph-online/ai-plugin-scanner-action) on every push and pull
+# request to main: the Claude Code plugin in ./plugin, the marketplace manifest in
+# .claude-plugin/, and this repo's own CI hygiene. The HOL Registry counts this as
+# scanner CI when it scores the plugin's trust.
+#
+# Runs offline (no `online` probing, no submission issues, no SARIF upload), so it needs
+# no secrets and only read access. It uses `scan` mode, which detects Claude Code plugins;
+# the scanner's `verify` mode checks for a Codex manifest only, so it isn't used here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: hol-plugin-scanner
+        uses: hashgraph-online/ai-plugin-scanner-action@1fb7eef6f7387abd0512e91ee8f336ac8bf07c95 # v1.2.789
+        with:
+          plugin_dir: "."
+          mode: scan
+          fail_on_severity: high
