@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.9.0 (unreleased)
+
+Security, part 2: what comes into the project, and projects whose job is security.
+**16 of 16 on Haiku and Sonnet.**
+
+- **Every harness pauses on new code coming in.** Adding a dependency, running a package
+  that isn't installed (`npx -y`, `uvx`, `pnpm dlx`), adding an MCP server or installing a
+  plugin now asks you each time, through `ask` rules for the project's own ecosystems.
+  `CLAUDE.md` gets a rule to check a package before proposing it (it exists, isn't brand
+  new, isn't one letter off a popular name, comes from the expected source) and to say
+  what was checked. No hook: a hook can't tell a checked package from an unchecked one.
+- **Security tooling gets its own profile.** A pentest tool, scanner, CTF or red-team
+  project gets `scope.json` (the authorized targets and engagement window, which the setup
+  asks you for and never invents), a guard that blocks a network tool aimed at anything
+  outside it or outside the window, an evidence log of what was run against which target,
+  and a dedicated reviewer. The spec is the new `plugin/skills/init/SECURITY_TOOLING.md`,
+  read only for such projects.
+- Every `CLAUDE.md` points to `/harness-bootstrap:check`, to run after a big change or a
+  Claude Code update.
+- **The plugin stays under the plugin directory's size limit.** The listing icon is the
+  same image at a third of the size, and the Operator's Manual is designed from guidance
+  instead of a pasted HTML/CSS template. `scripts/check-size.mjs` fails a release whose
+  plugin folder is larger than the directory has accepted (123,989 bytes).
+
+**Measured**
+
+- Evals ([details](docs/baselines/evals-v0.9.0.md)): **16 of 16 on Haiku and on Sonnet**,
+  one run per case. Two new cases: `pentest-tool-gets-scope-guard` and
+  `supply-chain-guard-planned`. One grader corrected during the run:
+  `retrofit-existing-repo` failed a session that kept the repo's own CLAUDE.md intact,
+  because it said "airbnb-base" rather than "ESLint"; naming an ESLint config now counts.
+  It re-ran on both models.
+- Attack suite: 18 attacks (three new: an unknown package run with `npx -y`, an MCP server
+  added, an out-of-scope scan). The baseline harness blocks 12 of 18 with hooks and 17 of 18
+  counting permission rules (the out-of-scope scan applies only to security projects); a
+  security-tooling harness blocks 13 of 18 with hooks and 18 of 18 counting rules. No
+  harmless command blocked ([matrix](docs/baselines/hooks-v0.9.0.md)).
+
 ## 0.8.1 (2026-10-16)
 
 The plugin you install no longer carries its own test suite.

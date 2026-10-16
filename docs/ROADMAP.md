@@ -15,7 +15,7 @@ kept separately.
 | v0.7.1 | **Released** on GitHub (2026-10-14): 12 of 12 on Haiku and on Sonnet ([`evals-v0.7.1.md`](baselines/evals-v0.7.1.md)). A patch release, not in the original plan: a setup that can't write into `.claude/` still writes `CLAUDE.md`, tries each security file and reports what's missing. The directory's scanner refused to fetch its commit with an error that matches nothing in it; a fresh commit (`5009637`, docs only) is waiting for the scanner's next try |
 | 2 v0.8 | **Released** 2026-10-16 on `release/0.8.0`: 14 of 14 on Haiku, Sonnet and Opus with the plugin (plain Claude Code: 5, 4 and 6 of 13); hooks block 12 of 15 attacks, 15 of 15 counting rules ([`evals-v0.8.0.md`](baselines/evals-v0.8.0.md), [`hooks-v0.8.0.md`](baselines/hooks-v0.8.0.md)). Fable left out (not on the account's plan) |
 | v0.8.1 | **Released** 2026-10-16: a packaging fix, not in the original plan. The plugin directory refused every commit after v0.7.0 at its Fetch step; the only difference from the accepted v0.7.0 is the plugin folder's size (123,989 bytes accepted, 126,302 and up refused), so the eval cases move out of `plugin/` into `evals/`. The skill is unchanged, so v0.8.0's results carry over |
-| 3 v0.9 | Written on `roadmap/phase-0-baseline` before v0.7 shipped, not eval-tested: supply-chain `ask` rules, security-tooling type with scope guard, 2 eval cases. Carried over to its own release branch after v0.8, like v0.8's work was |
+| 3 v0.9 | **In progress** on `release/0.9.0`: supply-chain vetting, the security-tooling profile (`SECURITY_TOOLING.md`) and the `/check` pointer carried over; 16 of 16 on Haiku and Sonnet ([`evals-v0.9.0.md`](baselines/evals-v0.9.0.md)); plugin folder 120,865 bytes after recompressing the icon and replacing the Operator's Manual template, with a size check in the release checks. Left: the security example, docs, release |
 | 4 v0.10 | Written on `roadmap/phase-0-baseline`, not eval-tested: built-ins table, `/ready` rename, bug-fix pipeline, long-running kit, script pattern, 3 eval cases |
 | 5 v1.0 | Written on `roadmap/phase-0-baseline`, not eval-tested: held-out set (7 cases, in `harness-qa/heldout-evals`), `/harness-bootstrap:tune`, `scripts/improve-loop.mjs`. No real loop round run yet |
 | Ongoing | Workaround tags written on `roadmap/phase-0-baseline` (ships with v0.10 or v1.0) |
@@ -571,6 +571,14 @@ the friction log is verified to contain only the four allowed fields.
 ## Phase 3 — v0.9: Security, part 2
 
 **Goal:** cover the supply chain, and give security projects their own profile.
+
+**Status (2026-10-17):** done except the release. Carried over from
+`roadmap/phase-0-baseline` into the single spec (supply chain in `HARNESS_REFERENCE.md`
+§1.2.1 point 4 and §1.7; security tooling in a new `SECURITY_TOOLING.md`, read only for
+such projects). The two eval cases got concrete criteria. The scope guard counts as part
+of the security baseline, so it's still attempted after a refused `.claude/` write. Making
+room under the plugin directory's fetch limit (confirmed between 124.0 and 126.3 kB) took
+the icon recompression and dropping the Operator's Manual HTML/CSS template.
 
 ### Step 3.1: Supply-chain vetting
 

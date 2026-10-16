@@ -1,0 +1,9 @@
+.claude/session-data/
+.claude/settings.local.json
+findings/
+report/out/
+*.exe
+/bin/
+.env
+.env.*
+!.env.example

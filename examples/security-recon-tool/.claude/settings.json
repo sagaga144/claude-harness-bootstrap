@@ -1,0 +1,41 @@
+{
+  "model": "sonnet",
+  "permissions": {
+    "deny": [
+      "Read(.env)", "Read(**/.env)", "Read(~/.ssh/**)", "Read(~/.aws/**)",
+      "Bash(ssh:*)", "Bash(scp:*)", "Bash(curl:*)", "Bash(wget:*)"
+    ],
+    "ask": [
+      "Edit(.claude/hooks/**)", "Write(.claude/hooks/**)",
+      "Edit(.claude/agents/**)", "Write(.claude/agents/**)",
+      "Edit(.claude/settings.json)", "Write(.claude/settings.json)",
+      "Edit(.claude/settings.local.json)", "Write(.claude/settings.local.json)",
+      "Edit(.claude/harness.json)", "Write(.claude/harness.json)",
+      "Edit(.claude/session-data/friction.jsonl)", "Write(.claude/session-data/friction.jsonl)",
+      "Edit(.claude/session-data/evidence.jsonl)", "Write(.claude/session-data/evidence.jsonl)",
+      "Edit(scope.json)", "Write(scope.json)",
+      "Bash(go get *)", "Bash(go install *)",
+      "Bash(npx -y *)", "Bash(npx --yes *)",
+      "Bash(claude mcp add *)", "Bash(claude plugin install *)",
+      "Edit(.mcp.json)", "Write(.mcp.json)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "filesystem": { "allowWrite": ["~/go/pkg", "~/.cache"] },
+    "network": { "allowedDomains": ["proxy.golang.org", "sum.golang.org", "github.com"] }
+  },
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/critical-rules.cjs"] }] }],
+    "PreToolUse": [
+      { "matcher": "Bash|PowerShell", "hooks": [
+        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-bash-push.cjs"] },
+        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-harness.cjs"] },
+        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-remote-exec.cjs"] },
+        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-scope.cjs"] },
+        { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/secret-scan.cjs"] }
+      ] }
+    ],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/build-gate.cjs"], "timeout": 120 }] }]
+  }
+}

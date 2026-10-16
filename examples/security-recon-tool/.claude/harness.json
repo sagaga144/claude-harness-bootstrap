@@ -1,0 +1,39 @@
+{
+  "generator": "harness-bootstrap",
+  "version": "0.9.0",
+  "generatedAt": "2026-10-16",
+  "claudeCodeVersion": "2.1.301",
+  "mode": "fresh",
+  "profile": {
+    "language": "Go",
+    "projectType": "CLI tool",
+    "ui": false,
+    "persistence": false,
+    "trustBoundary": "security tooling: scope.json + date window, untrusted client-host output",
+    "published": false,
+    "deployTarget": "none yet",
+    "costAnswer": "keep cost low (default, no answer possible)",
+    "scopeAnswer": "essentials (default, no answer possible)"
+  },
+  "files": [
+    "CLAUDE.md",
+    ".gitignore",
+    ".claude/settings.json",
+    ".claude/BUGS.md",
+    ".claude/hooks/lib/friction.cjs",
+    ".claude/hooks/guard-bash-push.cjs",
+    ".claude/hooks/guard-harness.cjs",
+    ".claude/hooks/guard-remote-exec.cjs",
+    ".claude/hooks/guard-scope.cjs",
+    ".claude/hooks/secret-scan.cjs",
+    ".claude/hooks/critical-rules.cjs",
+    ".claude/hooks/build-gate.cjs",
+    ".claude/agents/planner.md",
+    ".claude/agents/cli-engineer.md",
+    ".claude/agents/go-reviewer.md",
+    ".claude/agents/security-tooling-reviewer.md",
+    ".claude/commands/verify.md",
+    ".claude/rules/findings.md",
+    "scripts/check-hooks.cjs"
+  ]
+}

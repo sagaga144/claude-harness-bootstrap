@@ -14,7 +14,9 @@ data, the sandbox is on where it runs) and the v0.8 additions: a version stamp
 `/harness-bootstrap:check`. The other four are from the v0.5.x test rounds. The
 [attack matrix](../docs/baselines/hooks-v0.8.0.md) shows the difference: the v0.8.0
 harnesses block 12 of 15 attacks with hooks (15 of 15 counting their permission rules);
-the v0.5.x ones block none with hooks.
+the v0.5.x ones block none with hooks. [security-recon-tool](security-recon-tool/) was
+generated with **v0.9.0** and shows the security-tooling profile: a written scope, a scope
+guard and an evidence log (13 of 18 attacks blocked by hooks, 18 of 18 counting rules).
 
 Each run also exposed gaps that were fixed in the next release (see
 [CHANGELOG](../CHANGELOG.md)), so these show what that version produced, not the latest.
@@ -32,3 +34,4 @@ scan or protected-files guard where the project calls for one.
 | [juce-audio-plugin](juce-audio-plugin/) | C++ JUCE plugin, real-time audio thread | The one hard rule (never allocate or lock on the audio thread) gets a `realtime-audio-thread` rule, a `warn-realtime-unsafe` hook, and a correctness reviewer that treats real-time safety as part of correctness. |
 | [ml-paper-reproduction](ml-paper-reproduction/) | PyTorch research repo with notebooks, no deploy target, no app | No pass/fail tests, so the turn-end gate is a syntax and notebook-validity check. A `reproducibility-check` skill and a data-leakage/seed reminder hook. Two agents only: `ml-engineer` and `correctness-reviewer`. |
 | [desktop-notes-app](desktop-notes-app/) | Tauri + Svelte, local markdown files, offline, no accounts | The vault is the user's data, so a `security-reviewer` checks the webview-to-Rust IPC boundary, vault file access, Tauri capabilities and markdown rendering. One product across two toolchains, so one `tauri-engineer` covering Svelte and Rust, a `correctness-reviewer` that also watches IPC types drifting between the two, and a `project-manager` for planning. v0.8.0. |
+| [security-recon-tool](security-recon-tool/) | Go tool for authorized external assessments: subdomain enumeration, httpx, nuclei, findings reports | Pointing a scanner at an unauthorized target is the new risk, so a written `scope.json` (asked for, never invented), a `guard-scope` hook that blocks network tools aimed outside it or outside the engagement window, and an evidence log of what was run against which target. A `security-tooling-reviewer` replaces the generic security reviewer. New Go modules, MCP servers and plugins ask first. v0.9.0. |
