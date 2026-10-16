@@ -143,6 +143,7 @@ Once the guided pair is settled, determine the rest before writing anything:
 | **Has auth or handles secrets/user input directly?** | API keys, login, PII, payment, anything network-facing → yes. |
 | **Multi-language / i18n?** | Only if the description says so or a repo already has translation files. |
 | **Is it a published package/library?** | Public API surface, semver, consumers you can't see → different discipline than an app (see Code Style / Testing below). |
+| **Is it security tooling or authorized testing?** | Pentest tools, scanners, CTF work, red-team or exploit/detection development. If yes: a written scope and a scope guard (`SECURITY_TOOLING.md`), and the final report asks for the authorized targets and dates; never invent them. |
 | **Deploy target, if any** | Named platform (Vercel, Fly, a Docker registry, an app store, PyPI, crates.io...) or "not yet" — don't invent one. |
 | **Existing conventions** | If retrofitting a real repo: read 3-5 existing files to match naming, test framework, and lint config already in use rather than imposing a different one. While you're in there, check for **declared-but-unused** signals too — a dependency in the manifest that's never imported, a config file (`.eslintrc`, etc.) with no script wired to run it — these are exactly the "looks done but isn't" gaps worth a line in the output CLAUDE.md's Gotchas. |
 
