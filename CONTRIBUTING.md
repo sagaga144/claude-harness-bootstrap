@@ -89,9 +89,12 @@ on a plain project description.
 
 ```bash
 claude plugin validate ./plugin
+node scripts/check-size.mjs
 ```
 
-It must pass. If you changed behavior, bump the version in both
+Both must pass. The plugin directory refuses to fetch a plugin folder above a size it
+doesn't publish (123,989 bytes was accepted, 126,302 refused), so keep tests, docs and
+scripts outside `plugin/`. If you changed behavior, bump the version in both
 `.claude-plugin/marketplace.json` and `plugin/.claude-plugin/plugin.json` and add a
 `CHANGELOG.md` entry.
 
