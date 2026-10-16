@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.1 (unreleased)
+## 0.8.1 (2026-10-16)
 
 The plugin you install no longer carries its own test suite.
 
