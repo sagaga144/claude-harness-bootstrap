@@ -94,7 +94,8 @@ harness.
 
 ## Tested, not just prompted
 
-The plugin ships with an eval suite in [`plugin/evals/`](plugin/evals/). Each case is a
+The plugin comes with an eval suite in [`evals/`](evals/), kept beside the plugin rather
+than inside it, so installing the plugin doesn't install its tests. Each case is a
 real Claude Code session that gets a project description, with graders that check what
 came out, and can also run once without the plugin, for comparison.
 
@@ -138,14 +139,15 @@ passes `cli-no-ui-no-persistence` and `published-library-semver` and sometimes d
 Run them from the repo root:
 
 ```bash
-claude plugin eval ./plugin --scaffold --allow-tools Write Edit
+node scripts/run-evals.mjs --release        # lists what a release run would start
+node scripts/run-evals.mjs --release --go   # starts it
 ```
 
-`--scaffold` lets `retrofit-existing-repo` build its fixture repo, and
-`--allow-tools Write Edit` lets runs write the `CLAUDE.md` the graders check. Each case is
-a full session on your own account. On a subscription, `node scripts/run-evals.mjs --go`
-runs the cases one by one and retries any that hit a usage limit; without `--go` it only
-lists what it would run. More in
+The runner puts the plugin and its cases together in a scratch folder, then runs each case
+as its own `claude plugin eval` command (with `--scaffold`, so `retrofit-existing-repo` can
+build its fixture repo, and `--allow-tools Write Edit`, so runs can write the `CLAUDE.md`
+the graders check). Each case is a full session on your own account; the runner retries
+any that hit a usage limit, and without `--go` it only lists what it would run. More in
 [CONTRIBUTING.md](CONTRIBUTING.md#run-the-evals).
 
 **What it caught.** The README always said you could just describe a project. The first

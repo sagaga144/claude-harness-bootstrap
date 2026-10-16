@@ -28,12 +28,13 @@ Then describe a project, or run `/harness-bootstrap:init` explicitly.
 
 ## Run the evals
 
-The suite lives in `plugin/evals/`: 8 cases, each a `prompt.md` plus `graders/`. From the
-repo root:
-
-```bash
-claude plugin eval ./plugin --scaffold --allow-tools Write Edit
-```
+The suite lives in `evals/` at the repo root: 14 cases, each a `prompt.md` (or
+`case.yaml`) plus `graders/`. It sits beside the plugin, not inside it, so the plugin that
+people install doesn't carry its tests. `claude plugin eval` expects the cases inside the
+plugin folder, so `scripts/run-evals.mjs` (below) puts a copy of both together in
+`hooks-run/eval-root/` and runs it there. To run `claude plugin eval` by hand, do the same:
+copy `plugin/` somewhere, put `evals/` inside it, and run
+`claude plugin eval <that folder> --scaffold --allow-tools Write Edit`.
 
 That runs every case with the plugin loaded, plus a no-plugin baseline for comparison.
 Useful flags:
@@ -49,7 +50,7 @@ Useful flags:
   graders check only that those writes were attempted, not the files themselves.
 
 Each run is a full Claude Code session on your own account, so a full suite costs real
-usage. Results go to `plugin/evals/results/` (gitignored).
+usage. Its own reports go to `evals/results/` inside that copy.
 
 On a subscription, a full suite can run into your usage limit partway through. The
 per-case runner avoids starting over. It starts nothing without `--go`: without it, it lists

@@ -19,8 +19,8 @@
 //                                              # keep each session's files and trace, in that folder
 //
 // Results: evals-run/plugin-<hash>/<model>/<case>.json plus SUMMARY.md there, where <hash>
-// covers everything in plugin/ except evals/, and <case>.case records the git hash of that
-// case's own folder. A docs or script commit re-runs nothing; editing one case's grader
+// covers the skills and the manifest (its version left out), and <case>.case records the
+// git hash of that case's own folder in evals/. A docs or script commit re-runs nothing; editing one case's grader
 // re-runs that case only; changing the skill re-runs everything. A case already recorded
 // for this plugin, case version and model without errors is skipped, so re-running after
 // an interruption picks up where it
@@ -57,13 +57,17 @@ const runs = opt('--runs', preset.runs);
 const git = (...a) => execFileSync('git', a).toString().trim();
 const root = git('rev-parse', '--show-toplevel');
 const commit = git('rev-parse', '--short', 'HEAD');
-const dirty = git('status', '--porcelain', '--', 'plugin') !== '';
-// A result depends on the plugin itself (skills, manifest: everything but evals/) and on
-// its own case's folder. Results are filed under the first and checked against the second,
+const dirty = git('status', '--porcelain', '--', 'plugin', 'evals') !== '';
+// A result depends on the plugin itself (everything in plugin/; before v0.8.1 the cases
+// lived in plugin/evals/ and are left out of the hash, so results carry over) and on its
+// own case's folder in evals/. Results are filed under the first and checked against the second,
 // so editing one case's grader re-runs that case only, and a docs commit re-runs nothing.
-const pluginEntries = git('ls-tree', 'HEAD', 'plugin/').split('\n').filter((l) => !/\tplugin\/evals$/.test(l)).join('\n');
-const pluginTree = createHash('sha1').update(pluginEntries).digest('hex').slice(0, 7);
-const caseTree = (c) => { try { return git('rev-parse', '--short', `HEAD:plugin/evals/${c}`); } catch { return 'none'; } };
+// The hash covers what a session actually reads: the skills, and the manifest with its
+// version left out (a version bump alone doesn't change what the plugin does).
+const manifest = JSON.parse(git('show', 'HEAD:plugin/.claude-plugin/plugin.json'));
+delete manifest.version;
+const pluginTree = createHash('sha1').update(git('rev-parse', 'HEAD:plugin/skills') + JSON.stringify(manifest)).digest('hex').slice(0, 7);
+const caseTree = (c) => { try { return git('rev-parse', '--short', `HEAD:evals/${c}`); } catch { return 'none'; } };
 
 // On Windows, npm installs claude as a .cmd shim, which Node can only start through a
 // shell. Find the executable the shim wraps and run that instead, so the eval arguments
@@ -79,18 +83,19 @@ function claudeBin() {
 }
 const claude = claudeBin();
 
-// --heldout <dir>: run the held-out cases in <dir>/cases against a copy of this plugin made
-// inside <dir>, and keep their results there too. Nothing about them lands in this repo,
-// where the improvement loop's sessions could read it.
+// claude plugin eval reads cases from a folder inside the plugin, but the cases don't ship
+// with it (they live in evals/ at the repo root), so each run assembles a copy: the plugin
+// plus its cases, in hooks-run/eval-root (gitignored). --heldout <dir>: the held-out cases
+// in <dir>/cases instead, assembled and recorded inside <dir>, so nothing about them lands
+// in this repo, where the improvement loop's sessions could read it.
 const heldout = opt('--heldout');
 const tag = `plugin-${pluginTree}${dirty ? `-dirty-${commit}` : ''}`;
 const outRoot = heldout ? join(heldout, 'results', tag) : join(root, 'evals-run', tag);
-const evalRoot = heldout ? join(heldout, 'runs', tag) : root;
-if (heldout) {
-  rmSync(evalRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
-  cpSync(join(root, 'plugin'), join(evalRoot, 'plugin'), { recursive: true, filter: (src) => !/[\\/]evals[\\/]results/.test(src) });
-  cpSync(join(heldout, 'cases'), join(evalRoot, 'plugin', 'heldout'), { recursive: true });
-}
+const evalRoot = heldout ? join(heldout, 'runs', tag) : join(root, 'hooks-run', 'eval-root');
+rmSync(evalRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+cpSync(join(root, 'plugin'), join(evalRoot, 'plugin'), { recursive: true });
+cpSync(heldout ? join(heldout, 'cases') : join(root, 'evals'), join(evalRoot, 'plugin', heldout ? 'heldout' : 'evals'),
+  { recursive: true, filter: (src) => !/[\\/]results([\\/]|$)/.test(src) });
 
 const evalsDir = join(evalRoot, 'plugin', heldout ? 'heldout' : 'evals');
 const cases = readdirSync(evalsDir, { withFileTypes: true })
@@ -163,7 +168,7 @@ function standIn() {
   rmSync(baselinePlugin, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   mkdirSync(join(baselinePlugin, '.claude-plugin'), { recursive: true });
   writeFileSync(join(baselinePlugin, '.claude-plugin', 'plugin.json'), JSON.stringify({ name: 'no-plugin-baseline', version: '0.0.0', description: 'Stand-in with no skills, for the no-plugin eval arm.' }, null, 2));
-  cpSync(join(root, 'plugin', 'evals'), join(baselinePlugin, 'evals'), { recursive: true, filter: (src) => !/[\\/]evals[\\/]results/.test(src) });
+  cpSync(join(root, 'evals'), join(baselinePlugin, 'evals'), { recursive: true, filter: (src) => !/[\\/]evals[\\/]results/.test(src) });
   return baselinePlugin;
 }
 

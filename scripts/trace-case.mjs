@@ -39,7 +39,7 @@ const root = execFileSync('git', ['rev-parse', '--show-toplevel']).toString().tr
 const sdkRoot = existsSync(join(root, '.tools')) ? root : resolve(root, '..', '..')
 const { query } = await import(pathToFileURL(join(sdkRoot, '.tools', 'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'sdk.mjs')).href)
 
-const caseDir = join(root, 'plugin', 'evals', name)
+const caseDir = join(root, 'evals', name)
 const raw = readFileSync(join(caseDir, 'prompt.md'), 'utf8')
 const [, front = '', body = raw] = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(raw) ?? []
 const field = (k) => front.split(/\r?\n/).map((l) => /^(\w+):\s*(.*)$/.exec(l)).find((m) => m && m[1] === k)?.[2]

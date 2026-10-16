@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.8.1 (unreleased)
+
+The plugin you install no longer carries its own test suite.
+
+- **The eval cases moved from `plugin/evals/` to `evals/`** at the repo root. Installing
+  the plugin now gets only what it uses: the skills, the manifest, the license and the
+  icon. The plugin folder drops from 151 KB to about 120 KB. The plugin directory had
+  refused every version after v0.7.0 at its fetch step with no reason that matched the
+  repository; the plugin folder's size is the only thing that changed, so this also
+  tests that.
+- Nothing the plugin does changed: the skills are byte for byte v0.8.0's, so v0.8.0's
+  results (14 of 14 on Haiku, Sonnet and Opus) still apply.
+- `scripts/run-evals.mjs` puts the plugin and its cases together in a scratch folder for
+  each run, since `claude plugin eval` reads cases from inside the plugin folder.
+
 ## 0.8.0 (2026-10-16)
 
 Keeping a harness current. A harness now knows what built it, and a second skill tells
